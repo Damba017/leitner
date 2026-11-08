@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
+	"github.com/Damba017/leitner/internal/auth"
 	"github.com/Damba017/leitner/internal/store"
 )
 
@@ -23,8 +27,91 @@ func openTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+// testApp is the whole handler over a fresh database.
+type testApp struct {
+	t  *testing.T
+	db *sql.DB
+	h  http.Handler
+}
+
+func newTestApp(t *testing.T, cfg config) *testApp {
+	t.Helper()
+	db := openTestDB(t)
+	return &testApp{t: t, db: db, h: newHandler(db, cfg)}
+}
+
+const testPassword = "geheim1"
+
+// addUser creates name with email name@example.com and testPassword.
+func (a *testApp) addUser(name string, admin bool) int64 {
+	a.t.Helper()
+	id, err := auth.CreateUser(context.Background(), a.db,
+		auth.NewUser{Username: name, Email: name + "@example.com", Password: testPassword, IsAdmin: admin})
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	return id
+}
+
+// session logs userID in without the login form and returns the cookie.
+func (a *testApp) session(userID int64) *http.Cookie {
+	a.t.Helper()
+	token, err := auth.NewSession(context.Background(), a.db, userID, time.Now())
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	return &http.Cookie{Name: sessionCookie, Value: token}
+}
+
+// request is built like a browser on the app's own page sends it: with
+// Sec-Fetch-Site same-origin. form (may be nil) makes it a form post.
+func (a *testApp) request(method, path string, form url.Values, c *http.Cookie) *http.Request {
+	var body io.Reader
+	if form != nil {
+		body = strings.NewReader(form.Encode())
+	}
+	r := httptest.NewRequest(method, path, body)
+	if form != nil {
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	r.Header.Set("Sec-Fetch-Site", "same-origin")
+	if c != nil {
+		r.AddCookie(c)
+	}
+	return r
+}
+
+func (a *testApp) serve(r *http.Request) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	a.h.ServeHTTP(rec, r)
+	return rec
+}
+
+func (a *testApp) do(method, path string, form url.Values, c *http.Cookie) *httptest.ResponseRecorder {
+	return a.serve(a.request(method, path, form, c))
+}
+
+// wantRedirect fails unless rec is a 303 to location.
+func wantRedirect(t *testing.T, rec *httptest.ResponseRecorder, location string) {
+	t.Helper()
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != location {
+		t.Errorf("got %d to %q, want 303 to %q\n%s", rec.Code, rec.Header().Get("Location"), location, rec.Body)
+	}
+}
+
+// wantStatus fails unless rec has status code and its body contains body.
+func wantStatus(t *testing.T, rec *httptest.ResponseRecorder, code int, body string) {
+	t.Helper()
+	if rec.Code != code {
+		t.Errorf("status = %d, want %d\n%s", rec.Code, code, rec.Body)
+	} else if !strings.Contains(rec.Body.String(), body) {
+		t.Errorf("body lacks %q:\n%s", body, rec.Body)
+	}
+}
+
 func TestStatic(t *testing.T) {
-	h := newHandler(openTestDB(t))
+	app := newTestApp(t, config{})
+	cookie := app.session(app.addUser("anna", false))
 	tests := []struct {
 		path       string
 		wantStatus int
@@ -41,10 +128,7 @@ func TestStatic(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			req := httptest.NewRequest("GET", tt.path, nil)
-			rec := httptest.NewRecorder()
-			h.ServeHTTP(rec, req)
-			res := rec.Result()
+			res := app.do("GET", tt.path, nil, cookie).Result()
 			body, _ := io.ReadAll(res.Body)
 			if res.StatusCode != tt.wantStatus {
 				t.Fatalf("status = %d, want %d", res.StatusCode, tt.wantStatus)
@@ -89,35 +173,47 @@ func TestStaticNoDirectoryListing(t *testing.T) {
 }
 
 func TestSecurityHeaders(t *testing.T) {
-	h := newHandler(openTestDB(t))
-	for _, path := range []string{"/", "/missing"} {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+	app := newTestApp(t, config{})
+	cookie := app.session(app.addUser("anna", false))
+	// Also on redirects, refusals and the pages for logged-out visitors.
+	tests := []struct {
+		method, path string
+		cookie       *http.Cookie
+	}{
+		{"GET", "/", cookie},
+		{"GET", "/missing", cookie},
+		{"GET", "/", nil},
+		{"GET", "/login", nil},
+		{"POST", "/api/me", nil},
+	}
+	for _, tt := range tests {
+		rec := app.do(tt.method, tt.path, nil, tt.cookie)
 		for name, want := range map[string]string{
 			"Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 			"X-Content-Type-Options":  "nosniff",
 			"Referrer-Policy":         "same-origin",
 		} {
 			if got := rec.Header().Get(name); got != want {
-				t.Errorf("%s: %s = %q, want %q", path, name, got, want)
+				t.Errorf("%s %s (logged in %v): %s = %q, want %q", tt.method, tt.path, tt.cookie != nil, name, got, want)
 			}
 		}
 	}
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	h := newHandler(openTestDB(t))
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/", nil))
-	if rec.Code != http.StatusMethodNotAllowed {
+	app := newTestApp(t, config{})
+	cookie := app.session(app.addUser("anna", false))
+	if rec := app.do("POST", "/", nil, cookie); rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("POST / = %d, want 405", rec.Code)
 	}
 }
 
 func TestPagesParse(t *testing.T) {
 	p := mustParsePages()
-	if _, ok := p["notfound.html"]; !ok {
-		t.Errorf("pages = %v, want notfound.html", p)
+	for _, name := range []string{"notfound.html", "login.html", "register.html", "account.html", "admin.html", "confirm.html"} {
+		if _, ok := p[name]; !ok {
+			t.Errorf("pages = %v, want %s", p, name)
+		}
 	}
 	if _, ok := p["layout.html"]; ok {
 		t.Error("layout.html is parsed as a page of its own")
@@ -127,7 +223,7 @@ func TestPagesParse(t *testing.T) {
 func TestRenderUnknownPage(t *testing.T) {
 	s := &server{pages: mustParsePages()}
 	rec := httptest.NewRecorder()
-	s.render(rec, http.StatusOK, "nope.html", nil)
+	s.render(rec, http.StatusOK, "nope.html", pageData{})
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}

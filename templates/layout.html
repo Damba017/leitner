@@ -7,8 +7,25 @@
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
+{{if .Me.ID}}
+<header class="topbar">
+  <nav class="menu" aria-label="Hoofdmenu">
+    <a href="/">Leitner</a>
+    <a href="/account"{{if eq .Nav "account"}} aria-current="page"{{end}}>Account</a>
+    {{if .Me.IsAdmin}}<a href="/admin"{{if eq .Nav "admin"}} aria-current="page"{{end}}>Admin</a>{{end}}
+  </nav>
+  <div class="who">
+    <span class="muted">Ingelogd als {{.Me.Username}}</span>
+    <form method="post" action="/logout"><button class="link">Uitloggen</button></form>
+  </div>
+</header>
+{{end}}
 <main class="page">
 {{block "content" .}}{{end}}
 </main>
 </body>
 </html>
+{{define "messages"}}
+{{with .Error}}<p class="error" role="alert">{{.}}</p>{{end}}
+{{with .Notice}}<p class="notice" role="status">{{.}}</p>{{end}}
+{{end}}

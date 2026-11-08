@@ -1,0 +1,25 @@
+{{define "title"}}Account · Leitner{{end}}
+{{define "content"}}
+<h1>Account</h1>
+<p>{{.Me.Username}} · {{.Me.Email}}</p>
+{{template "messages" .}}
+
+<h2>Wachtwoord wijzigen</h2>
+<form method="post" action="/account/password" class="stack">
+  <input type="text" name="username" value="{{.Me.Username}}" autocomplete="username" hidden>
+  <label for="current">Huidig wachtwoord</label>
+  <input id="current" name="current" type="password" autocomplete="current-password" required>
+  <label for="password">Nieuw wachtwoord</label>
+  <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" aria-describedby="password-hint" required>
+  <p id="password-hint" class="hint">Minstens 6 tekens. Je andere apparaten worden uitgelogd.</p>
+  <label for="password2">Herhaal nieuw wachtwoord</label>
+  <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="6" required>
+  <button>Wachtwoord wijzigen</button>
+</form>
+
+<h2>Overal uitloggen</h2>
+<p>Log uit op al je apparaten, ook dit.</p>
+<form method="post" action="/logout-all">
+  <button class="secondary">Overal uitloggen</button>
+</form>
+{{end}}

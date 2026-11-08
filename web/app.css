@@ -8,7 +8,10 @@
   --muted: #4d5a56;
   --accent: #23706a; /* calm blue-green, 5.4:1 on --bg */
   --border: #d5ddda;
+  --field-border: #6f7d79; /* 4.3:1 on --surface: form fields need 3:1 */
   --focus: #23706a;
+  --on-accent: #ffffff; /* 5.8:1 on --accent */
+  --danger: #b3261e; /* 6.1:1 on --bg */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,7 +22,10 @@
     --muted: #a7b4b0;
     --accent: #6cc5b8;
     --border: #33403d;
+    --field-border: #7d8b87;
     --focus: #6cc5b8;
+    --on-accent: #141a19;
+    --danger: #f2b8b5;
   }
 }
 
@@ -63,4 +69,173 @@ a {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* Top bar: menu on the left, who is logged in and logout on the right. */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem max(1rem, env(safe-area-inset-right)) 0.5rem max(1rem, env(safe-area-inset-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.menu,
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+
+.menu a {
+  padding: 0.25rem 0;
+  text-decoration: none;
+}
+
+.menu a[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Forms: one column, label above its field. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  max-width: 24rem;
+}
+
+.stack label {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.stack button {
+  margin-top: 1rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: 0.4rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+button {
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+button.secondary {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+button.danger {
+  color: var(--danger);
+  background: var(--surface);
+  border-color: var(--danger);
+}
+
+/* A button that looks like a link (logout in the top bar). */
+button.link {
+  padding: 0.25rem 0;
+  font-weight: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
+
+form {
+  margin: 0;
+}
+
+.error,
+.notice {
+  padding: 0.6rem 0.8rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--danger);
+  border-radius: 0.4rem;
+}
+
+.notice {
+  border-left-color: var(--accent);
+}
+
+h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+/* A line of controls that wraps on narrow screens. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.row input {
+  width: auto;
+  flex: 1 1 10rem;
+  max-width: 16rem;
+}
+
+/* Admin: one card per user. */
+.users {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.users li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.users .user {
+  margin: 0;
+  color: var(--text);
+}
+
+.badge {
+  padding: 0.05rem 0.45rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 1rem;
 }

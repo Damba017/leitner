@@ -1,0 +1,38 @@
+{{define "title"}}Admin · Leitner{{end}}
+{{define "content"}}
+<h1>Admin</h1>
+{{template "messages" .}}
+
+<h2>Registratie</h2>
+<form method="post" action="/admin/registration" class="row">
+  <span>Registreren is <strong>{{if .RegistrationOpen}}open{{else}}gesloten{{end}}</strong>.</span>
+  <input type="hidden" name="open" value="{{if .RegistrationOpen}}0{{else}}1{{end}}">
+  <button>{{if .RegistrationOpen}}Registratie sluiten{{else}}Registratie openen{{end}}</button>
+</form>
+
+<h2>Gebruikers</h2>
+<ul class="users">
+{{range .Users}}
+  <li>
+    <p class="user"><strong>{{.Username}}</strong>{{if .IsAdmin}} <span class="badge">admin</span>{{end}}{{if eq .ID $.Me.ID}} <span class="muted">(jij)</span>{{end}}<br>
+      <span class="muted">{{.Email}}</span></p>
+    <div class="row">
+      <form method="post" action="/admin/users/{{.ID}}/admin">
+        <input type="hidden" name="admin" value="{{if .IsAdmin}}0{{else}}1{{end}}">
+        <button class="secondary">{{if .IsAdmin}}Admin intrekken{{else}}Admin maken{{end}}</button>
+      </form>
+      {{if ne .ID $.Me.ID}}
+      <form method="get" action="/admin/users/{{.ID}}/delete">
+        <button class="danger">Verwijderen…</button>
+      </form>
+      {{end}}
+    </div>
+    <form method="post" action="/admin/users/{{.ID}}/password" class="row">
+      <label for="pw-{{.ID}}">Nieuw wachtwoord</label>
+      <input id="pw-{{.ID}}" name="password" type="password" autocomplete="off" minlength="6" required>
+      <button class="secondary">Wachtwoord resetten</button>
+    </form>
+  </li>
+{{end}}
+</ul>
+{{end}}

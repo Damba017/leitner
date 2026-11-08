@@ -1,0 +1,13 @@
+{{define "title"}}Inloggen · Leitner{{end}}
+{{define "content"}}
+<h1>Inloggen</h1>
+{{template "messages" .}}
+<form method="post" action="/login" class="stack">
+  <label for="login">Gebruikersnaam of e-mail</label>
+  <input id="login" name="login" value="{{.Login}}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254" required>
+  <label for="password">Wachtwoord</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required>
+  <button>Inloggen</button>
+</form>
+{{if .RegistrationOpen}}<p>Nog geen account? <a href="/register">Account aanmaken</a></p>{{end}}
+{{end}}

@@ -22,6 +22,9 @@ import (
 
 const usage = `Usage:
   leitner serve [-addr host:port] [-db file] [-url base-url]
+  leitner create-admin -db file                       (asks for name, email and password)
+  leitner reset-password -db file username-or-email   (asks for the new password)
+  leitner list-users -db file
   leitner backup -db file path
   leitner version
 
@@ -41,6 +44,12 @@ func main() {
 	switch cmd {
 	case "serve":
 		err = runServe(args)
+	case "create-admin":
+		err = runCreateAdmin(args, stdTerminal())
+	case "reset-password":
+		err = runResetPassword(args, stdTerminal())
+	case "list-users":
+		err = runListUsers(args, stdTerminal())
 	case "backup":
 		err = runBackup(args)
 	case "version":

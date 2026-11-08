@@ -19,6 +19,22 @@ func webFS() fs.FS {
 	return files
 }
 
+// publicFiles lists every static file except the app page itself, so styles
+// and scripts (later icons and the manifest) also load on the login page.
+func publicFiles(files fs.FS) map[string]bool {
+	public := map[string]bool{}
+	err := fs.WalkDir(files, ".", func(name string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && name != "index.html" {
+			public["/"+name] = true
+		}
+		return err
+	})
+	if err != nil {
+		panic(err) // the embedded files are fixed at compile time
+	}
+	return public
+}
+
 // static serves the app shell from files. Unknown paths and folders get the
 // templated 404 page instead of http.FileServer's plain text or a listing.
 func (s *server) static(files fs.FS) http.Handler {

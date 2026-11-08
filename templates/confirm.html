@@ -1,0 +1,11 @@
+{{define "title"}}Bevestigen · Leitner{{end}}
+{{define "content"}}
+<h1>{{.Confirm.Question}}</h1>
+<p>{{.Confirm.Note}}</p>
+<div class="row">
+  <form method="post" action="{{.Confirm.Action}}">
+    <button class="danger">{{.Confirm.Button}}</button>
+  </form>
+  <a href="{{.Confirm.Back}}">Annuleren</a>
+</div>
+{{end}}
