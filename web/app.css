@@ -1,0 +1,66 @@
+/* Themes only via these variables. Light by default, dark follows the system;
+   a manual toggle per device comes in phase 3. */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --text: #1c2421;
+  --muted: #4d5a56;
+  --accent: #23706a; /* calm blue-green, 5.4:1 on --bg */
+  --border: #d5ddda;
+  --focus: #23706a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141a19;
+    --surface: #1d2523;
+    --text: #e3ebe8;
+    --muted: #a7b4b0;
+    --accent: #6cc5b8;
+    --border: #33403d;
+    --focus: #6cc5b8;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem max(1rem, env(safe-area-inset-right)) 1.5rem max(1rem, env(safe-area-inset-left));
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+p {
+  color: var(--muted);
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
