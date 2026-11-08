@@ -1,7 +1,9 @@
-/* Themes only via these variables. Light by default, dark follows the system;
-   a manual toggle per device comes in phase 3. */
+/* Themes only via these variables. Light by default; dark follows the
+   system unless the device chose light, or when it chose dark (theme.js sets
+   data-theme). The dark values appear twice because CSS can't share them
+   between a media query and an attribute selector without a build step. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --bg: #f6f8f7;
   --surface: #ffffff;
   --text: #1c2421;
@@ -12,10 +14,14 @@
   --focus: #23706a;
   --on-accent: #ffffff; /* 5.8:1 on --accent */
   --danger: #b3261e; /* 6.1:1 on --bg */
+  --hover: #e9f0ee;
+  --current: #d9ebe7; /* tree row of the open page; --text and --accent stay AA on it */
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #141a19;
     --surface: #1d2523;
     --text: #e3ebe8;
@@ -26,7 +32,27 @@
     --focus: #6cc5b8;
     --on-accent: #141a19;
     --danger: #f2b8b5;
+    --hover: #232d2b;
+    --current: #1f3a36;
+    --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.3);
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141a19;
+  --surface: #1d2523;
+  --text: #e3ebe8;
+  --muted: #a7b4b0;
+  --accent: #6cc5b8;
+  --border: #33403d;
+  --field-border: #7d8b87;
+  --focus: #6cc5b8;
+  --on-accent: #141a19;
+  --danger: #f2b8b5;
+  --hover: #232d2b;
+  --current: #1f3a36;
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.3);
 }
 
 *,
@@ -238,4 +264,474 @@ h2 {
   color: var(--accent);
   border: 1px solid var(--accent);
   border-radius: 1rem;
+}
+
+/* Hidden from view, still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+select {
+  max-width: 100%;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: 0.4rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+fieldset {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  align-self: stretch;
+}
+
+legend {
+  padding: 0 0.25rem;
+  font-weight: 600;
+}
+
+/* A checkbox or radio with its text on one line. */
+.stack label.choice,
+label.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0;
+  font-weight: 400;
+}
+
+button.small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+/* A toggle that is on, like Ordenen while ordering. */
+button.secondary[aria-pressed="true"] {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+#sidebar-title:focus {
+  outline: none;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.theme-pick select {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.875rem;
+}
+
+/* The app: one column on phones; sidebar with the tree next to the page on
+   wider screens. On a phone the tree is the start screen and gives way to
+   the page of a heading or list. */
+.app {
+  display: grid;
+  gap: 1rem 2rem;
+  align-items: start;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left));
+}
+
+.status {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 0.4rem;
+}
+
+.status.is-error {
+  border-left-color: var(--danger);
+}
+
+.sidebar {
+  min-width: 0;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-head h2 {
+  margin: 0;
+}
+
+.main {
+  min-width: 0;
+  max-width: 44rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 47.99rem) {
+  .app:not([data-route="home"]) .sidebar,
+  .app[data-route="home"] .main {
+    display: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .app {
+    grid-template-columns: 18rem minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    padding: 0.25rem 0.5rem 1rem 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .back-link {
+    display: none;
+  }
+}
+
+/* The tree of headings and lists. */
+.tree {
+  margin-bottom: 1rem;
+}
+
+.tree-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tree-list .tree-list {
+  margin-left: 1.1rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--border);
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 2.25rem;
+  border-radius: 0.4rem;
+}
+
+.tree-row:hover {
+  background: var(--hover);
+}
+
+.tree-row.is-current {
+  background: var(--current);
+}
+
+.tree-toggle,
+.tree-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 2.75rem;
+  min-height: 2.25rem;
+  padding: 0 0.2rem;
+  font-weight: 400;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.tree-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4rem 0.25rem;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.tree-link:hover {
+  text-decoration: underline;
+}
+
+.tree-row.is-current .tree-link {
+  font-weight: 600;
+}
+
+.tree-empty {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Ordering mode: drag handle and up/down buttons per row. */
+.drag-handle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-height: 2.25rem;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.order-buttons {
+  flex: none;
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.order-buttons button {
+  min-width: 2.25rem;
+  padding: 0.2rem 0.4rem;
+  font-weight: 400;
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.tree-item.is-dragging {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  border-radius: 0.4rem;
+  box-shadow: var(--shadow);
+  cursor: grabbing;
+}
+
+.tree-item.drop-before {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.tree-item.drop-after {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+body.is-dragging {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grabbing;
+}
+
+/* Page of a heading or list. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  font-size: 0.875rem;
+  list-style: none;
+}
+
+.crumbs li + li::before {
+  content: "›";
+  margin-right: 0.25rem;
+  color: var(--muted);
+}
+
+.main h1 {
+  overflow-wrap: anywhere;
+}
+
+.main h1:focus {
+  outline: none;
+}
+
+.actions {
+  margin: 0.5rem 0 1.5rem;
+}
+
+.contents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contents a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.contents a:hover {
+  border-color: var(--accent);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+.settings dt {
+  font-weight: 600;
+}
+
+.settings dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Dialogs (forms and delete confirmation). */
+dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 1.25rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+dialog h2 {
+  margin: 0;
+}
+
+dialog .stack {
+  max-width: none;
+}
+
+dialog .stack > input:not([type="checkbox"], [type="radio"]),
+dialog .stack > select {
+  width: 100%;
+}
+
+.dialog-buttons {
+  margin-top: 0.5rem;
+}
+
+.stack .dialog-buttons button {
+  margin-top: 0;
+}
+
+/* Flash card: two faces, flipped in 3D. A face's visibility switches halfway
+   (0.25 s of 0.5 s), so only the side facing you is read out and focusable. */
+.flipcard {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  font-weight: 400;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 0.75rem;
+  perspective: 60rem;
+}
+
+.flipcard-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s ease;
+  transform-style: preserve-3d;
+}
+
+.flipcard.is-flipped .flipcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flipcard-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transition: visibility 0s linear 0.25s;
+}
+
+.flipcard-back {
+  transform: rotateY(180deg);
+  visibility: hidden;
+}
+
+.flipcard.is-flipped .flipcard-front {
+  visibility: hidden;
+}
+
+.flipcard.is-flipped .flipcard-back {
+  visibility: visible;
+}
+
+.flipcard-text {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.flipcard-side {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipcard-inner,
+  .flipcard-face {
+    transition: none;
+  }
 }

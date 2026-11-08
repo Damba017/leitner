@@ -5,23 +5,110 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Leitner</title>
 <link rel="stylesheet" href="/app.css">
+<script src="/theme.js"></script>
 <script type="module" src="/app.js"></script>
 </head>
 <body>
 <header class="topbar">
   <nav class="menu" aria-label="Hoofdmenu">
-    <a href="/" aria-current="page">Leitner</a>
+    <a href="#/" aria-current="page">Leitner</a>
     <a href="/account">Account</a>
     <a href="/admin" id="admin-link" hidden>Admin</a>
   </nav>
   <div class="who">
+    <label class="theme-pick">
+      <span class="visually-hidden">Thema</span>
+      <select id="theme">
+        <option value="system">Thema: systeem</option>
+        <option value="light">Thema: licht</option>
+        <option value="dark">Thema: donker</option>
+      </select>
+    </label>
     <span class="muted" id="me"></span>
     <form method="post" action="/logout"><button class="link">Uitloggen</button></form>
   </div>
 </header>
-<main class="page">
-<h1>Leitner</h1>
-<p id="status">De app wordt nog gebouwd.</p>
-</main>
+
+<div class="app" id="app" data-route="home">
+  <p class="status" id="status" role="status" hidden></p>
+
+  <aside class="sidebar" aria-labelledby="sidebar-title">
+    <div class="sidebar-head">
+      <h2 id="sidebar-title" tabindex="-1">Overzicht</h2>
+      <button type="button" class="secondary small" id="order-toggle" aria-pressed="false">Ordenen</button>
+    </div>
+    <p class="hint" id="order-hint" hidden>Sleep aan ⠿ of gebruik ↑ en ↓. Naar een andere kop verplaatsen gaat via Bewerken.</p>
+    <div id="tree" class="tree"></div>
+    <button type="button" class="secondary" id="add-top">+ Nieuwe kop</button>
+  </aside>
+
+  <main class="main" id="view"></main>
+</div>
+
+<dialog id="heading-dialog" aria-labelledby="heading-dialog-title">
+  <form class="stack" id="heading-form" novalidate>
+    <h2 id="heading-dialog-title">Kop</h2>
+    <p class="error" role="alert" hidden></p>
+    <label for="heading-name">Naam</label>
+    <input id="heading-name" name="name" required maxlength="100" autocomplete="off">
+    <label for="heading-parent">Valt onder</label>
+    <select id="heading-parent" name="parent"></select>
+    <div class="row dialog-buttons">
+      <button type="submit">Opslaan</button>
+      <button type="button" class="secondary" data-close>Annuleren</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="list-dialog" aria-labelledby="list-dialog-title">
+  <form class="stack" id="list-form" novalidate>
+    <h2 id="list-dialog-title">Lijst</h2>
+    <p class="error" role="alert" hidden></p>
+    <label for="list-name">Naam</label>
+    <input id="list-name" name="name" required maxlength="100" autocomplete="off">
+    <label for="list-heading">Valt onder</label>
+    <select id="list-heading" name="heading"></select>
+
+    <label for="list-lang1">Taal van kant 1</label>
+    <select id="list-lang1" name="lang1" data-other="list-lang1-other"></select>
+    <input id="list-lang1-other" name="lang1-other" aria-label="Taalcode van kant 1" placeholder="Taalcode, bijv. sv of pt-BR" autocomplete="off" hidden>
+
+    <label for="list-lang2">Taal van kant 2</label>
+    <select id="list-lang2" name="lang2" data-other="list-lang2-other"></select>
+    <input id="list-lang2-other" name="lang2-other" aria-label="Taalcode van kant 2" placeholder="Taalcode, bijv. sv of pt-BR" autocomplete="off" hidden>
+
+    <fieldset>
+      <legend>Oefenrichting</legend>
+      <label class="choice"><input type="radio" name="direction" value="1-2"> Kant 1 → kant 2</label>
+      <label class="choice"><input type="radio" name="direction" value="2-1"> Kant 2 → kant 1</label>
+      <label class="choice"><input type="radio" name="direction" value="both"> Beide (elke keer een willekeurige kant)</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Antwoordcontrole</legend>
+      <label class="choice"><input type="checkbox" name="strictCase"> Hoofdletters moeten kloppen</label>
+      <label class="choice"><input type="checkbox" name="strictPunct"> Leestekens moeten kloppen</label>
+      <label class="choice"><input type="checkbox" name="strictAccents"> Accenten moeten kloppen</label>
+      <p class="hint">Uit: een verschil telt niet als fout. Bij een ontbrekend accent krijg je dan wel een waarschuwing.</p>
+    </fieldset>
+
+    <div class="row dialog-buttons">
+      <button type="submit">Opslaan</button>
+      <button type="button" class="secondary" data-close>Annuleren</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="delete-dialog" aria-labelledby="delete-dialog-title">
+  <form class="stack" id="delete-form">
+    <h2 id="delete-dialog-title"></h2>
+    <p class="error" role="alert" hidden></p>
+    <p id="delete-note"></p>
+    <div class="row dialog-buttons">
+      <button type="submit" class="danger">Verwijderen</button>
+      <button type="button" class="secondary" data-close autofocus>Annuleren</button>
+    </div>
+  </form>
+</dialog>
 </body>
 </html>

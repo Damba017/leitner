@@ -55,8 +55,8 @@ func SetAdmin(ctx context.Context, db *sql.DB, userID int64, admin bool) error {
 	return tx.Commit()
 }
 
-// DeleteUser removes a user; their sessions (and later their headings, lists
-// and cards) go with them through ON DELETE CASCADE. It fails for the last admin.
+// DeleteUser removes a user; their sessions, headings and lists (and later
+// their cards) go with them through ON DELETE CASCADE. It fails for the last admin.
 func DeleteUser(ctx context.Context, db *sql.DB, userID int64) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {

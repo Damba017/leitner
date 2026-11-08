@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -318,7 +317,5 @@ func (s *server) logoutAll(w http.ResponseWriter, r *http.Request) {
 // apiMe tells the app who is logged in; it shows the Admin link only to admins.
 func (s *server) apiMe(w http.ResponseWriter, r *http.Request) {
 	u, _ := currentUser(r)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(map[string]any{"username": u.Username, "isAdmin": u.IsAdmin})
+	writeJSON(w, http.StatusOK, map[string]any{"username": u.Username, "isAdmin": u.IsAdmin})
 }

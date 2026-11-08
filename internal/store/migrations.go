@@ -28,4 +28,35 @@ var migrations = []string{
 		expires_at INTEGER NOT NULL
 	) STRICT;
 	CREATE INDEX sessions_user ON sessions(user_id);`,
+
+	// 3: the tree of headings and lists. A NULL parent_id is the top level.
+	// Sub-headings and lists inside one heading share one position sequence,
+	// so the user can mix them. Deleting a heading cascades down the tree.
+	// One index per foreign key, so cascades and child lookups don't scan.
+	`CREATE TABLE headings (
+		id         INTEGER PRIMARY KEY,
+		user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		parent_id  INTEGER REFERENCES headings(id) ON DELETE CASCADE,
+		name       TEXT NOT NULL,
+		position   INTEGER NOT NULL,
+		created_at INTEGER NOT NULL
+	) STRICT;
+	CREATE INDEX headings_user ON headings(user_id);
+	CREATE INDEX headings_parent ON headings(parent_id);
+	CREATE TABLE lists (
+		id             INTEGER PRIMARY KEY,
+		user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		heading_id     INTEGER NOT NULL REFERENCES headings(id) ON DELETE CASCADE,
+		name           TEXT NOT NULL,
+		position       INTEGER NOT NULL,
+		lang1          TEXT NOT NULL,
+		lang2          TEXT NOT NULL,
+		direction      TEXT NOT NULL CHECK (direction IN ('1-2', '2-1', 'both')),
+		strict_case    INTEGER NOT NULL DEFAULT 0 CHECK (strict_case IN (0, 1)),
+		strict_punct   INTEGER NOT NULL DEFAULT 0 CHECK (strict_punct IN (0, 1)),
+		strict_accents INTEGER NOT NULL DEFAULT 0 CHECK (strict_accents IN (0, 1)),
+		created_at     INTEGER NOT NULL
+	) STRICT;
+	CREATE INDEX lists_user ON lists(user_id);
+	CREATE INDEX lists_heading ON lists(heading_id);`,
 }

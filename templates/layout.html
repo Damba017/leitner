@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{block "title" .}}Leitner{{end}}</title>
 <link rel="stylesheet" href="/app.css">
+<script src="/theme.js"></script>
 </head>
 <body>
 {{if .Me.ID}}
@@ -15,6 +16,14 @@
     {{if .Me.IsAdmin}}<a href="/admin"{{if eq .Nav "admin"}} aria-current="page"{{end}}>Admin</a>{{end}}
   </nav>
   <div class="who">
+    <label class="theme-pick">
+      <span class="visually-hidden">Thema</span>
+      <select id="theme">
+        <option value="system">Thema: systeem</option>
+        <option value="light">Thema: licht</option>
+        <option value="dark">Thema: donker</option>
+      </select>
+    </label>
     <span class="muted">Ingelogd als {{.Me.Username}}</span>
     <form method="post" action="/logout"><button class="link">Uitloggen</button></form>
   </div>
