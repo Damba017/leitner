@@ -55,10 +55,13 @@ export function renderHome(view, lib, actions) {
         ? "Je hebt nog geen koppen. Begin met een kop, bijvoorbeeld een taal of een vak."
         : "Kies links een kop of lijst.",
     }),
-    ...(empty ? [el("button", { type: "button", onclick: () => actions.newHeading(null), text: "+ Nieuwe kop" })] : []),
-    empty ? null : el("h2", { text: "Back-up" }),
-    empty ? null : el("p", { class: "hint", text: "Alle koppen, lijsten en kaarten in één JSON-bestand." }),
-    empty ? null : el("p", {}, el("a", { class: "button-link", href: "/api/export.json", download: "", text: "Alles downloaden (JSON)" })),
+    ...(empty
+      ? [el("button", { type: "button", onclick: () => actions.newHeading(null), text: "+ Nieuwe kop" })]
+      : [
+          el("h2", { text: "Back-up" }),
+          el("p", { class: "hint", text: "Alle koppen, lijsten en kaarten in één JSON-bestand." }),
+          el("p", {}, el("a", { class: "button-link", href: "/api/export.json", download: "", text: "Alles downloaden (JSON)" })),
+        ]),
   );
 }
 
