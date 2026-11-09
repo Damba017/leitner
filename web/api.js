@@ -8,12 +8,13 @@ export class ApiError extends Error {
 }
 
 // api sends body (if any) as JSON and returns the decoded answer, or null
-// for 204. Logged out, it goes to the login page.
-export async function api(method, path, body) {
+// for 204. With rawType, body is a string sent as is with that content type
+// (a CSV file). Logged out, it goes to the login page.
+export async function api(method, path, body, rawType) {
   const options = { method, headers: { Accept: "application/json" } };
   if (body !== undefined) {
-    options.headers["Content-Type"] = "application/json";
-    options.body = JSON.stringify(body);
+    options.headers["Content-Type"] = rawType ?? "application/json";
+    options.body = rawType ? body : JSON.stringify(body);
   }
   let res;
   try {

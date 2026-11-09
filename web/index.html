@@ -99,6 +99,57 @@
   </form>
 </dialog>
 
+<dialog id="card-dialog" aria-labelledby="card-dialog-title">
+  <form class="stack" id="card-form" novalidate>
+    <h2 id="card-dialog-title">Kaart</h2>
+    <p class="error" role="alert" hidden></p>
+    <p class="notice" id="card-added" role="status" hidden></p>
+    <label for="card-front" id="card-front-label">Kant 1</label>
+    <input id="card-front" name="front" required maxlength="500" autocomplete="off">
+    <label for="card-back" id="card-back-label">Kant 2</label>
+    <input id="card-back" name="back" required maxlength="500" autocomplete="off">
+    <p class="hint">Meerdere goede antwoorden? Scheid ze met een /, bijvoorbeeld: el mes / mes</p>
+    <label for="card-note">Notitie (niet verplicht)</label>
+    <input id="card-note" name="note" maxlength="500" autocomplete="off">
+    <label for="card-pron">Uitspraak van kant 1 (niet verplicht)</label>
+    <input id="card-pron" name="pronunciation" maxlength="500" autocomplete="off">
+    <p class="hint">Dit wordt voorgelezen in plaats van de geschreven tekst van kant 1, bijvoorbeeld fonetisch geschreven.</p>
+    <div class="row dialog-buttons">
+      <button type="submit" id="card-submit">Opslaan</button>
+      <button type="button" class="secondary" data-close id="card-close">Annuleren</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="paste-dialog" aria-labelledby="paste-dialog-title">
+  <form class="stack" id="paste-form" novalidate>
+    <h2 id="paste-dialog-title">Lijst plakken</h2>
+    <p class="error" role="alert" hidden></p>
+    <label for="paste-text">Eén kaart per regel</label>
+    <textarea id="paste-text" name="text" rows="8" required spellcheck="false" aria-describedby="paste-format"></textarea>
+    <p class="hint" id="paste-format">Formaat: <code>kant 1;kant 2;notitie</code>. De notitie is niet verplicht. Bijvoorbeeld:<br><code>el mes / mes;de maand;januari is enero</code></p>
+    <label class="choice"><input type="checkbox" name="swap"> Kanten omdraaien (het eerste deel wordt kant 2)</label>
+    <div class="row dialog-buttons">
+      <button type="submit">Toevoegen</button>
+      <button type="button" class="secondary" data-close>Annuleren</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="csv-dialog" aria-labelledby="csv-dialog-title">
+  <form class="stack" id="csv-form" novalidate>
+    <h2 id="csv-dialog-title">CSV importeren</h2>
+    <p class="error" role="alert" hidden></p>
+    <label for="csv-file">CSV-bestand</label>
+    <input id="csv-file" name="file" type="file" accept=".csv,text/csv" required aria-describedby="csv-format">
+    <p class="hint" id="csv-format">UTF-8, gescheiden door komma's, met als eerste regel <code>front,back,note</code> (note mag ontbreken). De kaarten worden toegevoegd aan deze lijst.</p>
+    <div class="row dialog-buttons">
+      <button type="submit">Importeren</button>
+      <button type="button" class="secondary" data-close>Annuleren</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="delete-dialog" aria-labelledby="delete-dialog-title">
   <form class="stack" id="delete-form">
     <h2 id="delete-dialog-title"></h2>

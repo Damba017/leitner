@@ -1,8 +1,8 @@
 // The main pages: overview, a heading, a list.
 
 import { el } from "./ui.js";
-import { createCard } from "./card.js";
 import { languageName } from "./languages.js";
+import { canSpeak, speak, spokenText } from "./speech.js";
 
 const directions = {
   "1-2": "Kant 1 → kant 2",
@@ -41,6 +41,9 @@ export function renderHome(view, lib, actions) {
         : "Kies links een kop of lijst.",
     }),
     ...(empty ? [el("button", { type: "button", onclick: () => actions.newHeading(null), text: "+ Nieuwe kop" })] : []),
+    empty ? null : el("h2", { text: "Back-up" }),
+    empty ? null : el("p", { class: "hint", text: "Alle koppen, lijsten en kaarten in één JSON-bestand." }),
+    empty ? null : el("p", {}, el("a", { class: "button-link", href: "/api/export.json", download: "", text: "Alles downloaden (JSON)" })),
   );
 }
 
@@ -85,20 +88,50 @@ export function renderHeading(view, lib, id, actions) {
   );
 }
 
-export function renderList(view, lib, id, actions) {
+// speakButton reads text aloud in lang; label says which side it is.
+function speakButton(label, text, lang) {
+  return el("button", {
+    type: "button",
+    class: "icon secondary",
+    "aria-label": `${label} voorlezen`,
+    onclick: () => speak(text, lang),
+    text: "🔊",
+  });
+}
+
+function cardRow(list, card, actions) {
+  const side = (label, text, lang, spoken) =>
+    el(
+      "div",
+      { class: "card-side" },
+      el("span", { class: "card-label", text: label }),
+      el("span", { class: "card-text", lang, text }),
+      canSpeak ? speakButton(label, spoken, lang) : null,
+    );
+  return el(
+    "li",
+    { class: "card-row" },
+    side("Kant 1", card.front, list.lang1, card.pronunciation || spokenText(card.front)),
+    side("Kant 2", card.back, list.lang2, spokenText(card.back)),
+    card.note ? el("p", { class: "card-note" }, el("span", { class: "visually-hidden", text: "Notitie: " }), card.note) : null,
+    el(
+      "div",
+      { class: "row card-actions" },
+      el("button", { type: "button", class: "secondary small", onclick: () => actions.editCard(card), text: "Bewerken" }),
+      el("button", { type: "button", class: "danger small", onclick: () => actions.deleteCard(card), text: "Verwijderen" }),
+    ),
+  );
+}
+
+// renderList shows a list with its settings and cards; cards is null while
+// they are loading.
+export function renderList(view, lib, id, actions, cards) {
   const list = lib.lists.get(id);
   if (!list) {
     renderNotFound(view);
     return;
   }
   const strict = (on) => (on ? "moeten kloppen" : "tellen niet mee");
-  const lang1 = languageName(list.lang1);
-  const lang2 = languageName(list.lang2);
-  // Temporary: shows the card component until phase 4 brings real cards.
-  const sample = createCard({
-    front: { text: "Kant 1", lang: list.lang1, label: lang1 },
-    back: { text: "Kant 2", lang: list.lang2, label: lang2 },
-  });
   view.replaceChildren(
     backLink(),
     crumbs(lib.path(list.headingId), list.name),
@@ -113,9 +146,9 @@ export function renderList(view, lib, id, actions) {
       "dl",
       { class: "settings" },
       el("dt", { text: "Kant 1" }),
-      el("dd", { text: lang1 }),
+      el("dd", { text: languageName(list.lang1) }),
       el("dt", { text: "Kant 2" }),
-      el("dd", { text: lang2 }),
+      el("dd", { text: languageName(list.lang2) }),
       el("dt", { text: "Oefenrichting" }),
       el("dd", { text: directions[list.direction] ?? list.direction }),
       el("dt", { text: "Hoofdletters" }),
@@ -125,10 +158,20 @@ export function renderList(view, lib, id, actions) {
       el("dt", { text: "Accenten" }),
       el("dd", { text: strict(list.strictAccents) }),
     ),
-    el("h2", { text: "Kaarten" }),
-    el("p", { text: "Kaarten toevoegen komt in de volgende versie. Zo ziet een kaart eruit:" }),
-    sample.element,
-    el("p", { class: "hint", text: "Klik op de kaart, of druk op Enter of spatie, om hem om te draaien." }),
+    el("h2", { text: cards ? `Kaarten (${cards.length})` : "Kaarten" }),
+    el(
+      "div",
+      { class: "row actions" },
+      el("button", { type: "button", onclick: () => actions.newCard(id), text: "+ Nieuwe kaart" }),
+      el("button", { type: "button", class: "secondary", onclick: () => actions.pasteCards(id), text: "Lijst plakken" }),
+      el("button", { type: "button", class: "secondary", onclick: () => actions.importCsv(id), text: "CSV importeren" }),
+      el("a", { class: "button-link", href: `/api/lists/${id}/export.csv`, download: "", text: "CSV exporteren" }),
+    ),
+    cards === null
+      ? el("p", { text: "Kaarten laden…" })
+      : cards.length
+        ? el("ul", { class: "cards" }, cards.map((c) => cardRow(list, c, actions)))
+        : el("p", { text: "Deze lijst heeft nog geen kaarten." }),
   );
 }
 

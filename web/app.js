@@ -7,7 +7,16 @@ import { showStatus } from "./ui.js";
 import { Library, ROOT, itemKey } from "./state.js";
 import { renderTree, loadOpen, saveOpen, focusMoveButton, focusToggle } from "./tree.js";
 import { renderHome, renderHeading, renderList } from "./views.js";
-import { setupDialogs, openHeadingDialog, openListDialog, openDeleteDialog } from "./dialogs.js";
+import {
+  setupDialogs,
+  openHeadingDialog,
+  openListDialog,
+  openDeleteDialog,
+  openCardDialog,
+  openPasteDialog,
+  openCsvDialog,
+  openDeleteCardDialog,
+} from "./dialogs.js";
 import { makeSortable } from "./drag.js";
 
 const app = document.getElementById("app");
@@ -21,6 +30,9 @@ let open = loadOpen(); // expanded headings on this device
 let ordering = false;
 let saving = Promise.resolve(); // order changes go to the server one by one
 let pendingStatus = null; // message for the page navigate() goes to
+// The cards of the list on screen; null cards = not loaded yet.
+let shown = { listId: null, cards: null };
+let loadingFor = null; // list whose cards are being fetched
 
 // showMe fills in who is logged in and shows the Admin link to admins.
 async function showMe() {
@@ -60,7 +72,13 @@ function render({ focus = false } = {}) {
   if (r?.kind === "heading") {
     renderHeading(view, lib, r.id, actions);
   } else if (r?.kind === "list") {
-    renderList(view, lib, r.id, actions);
+    if (shown.listId !== r.id) {
+      shown = { listId: r.id, cards: null };
+    }
+    renderList(view, lib, r.id, actions, shown.cards);
+    if (shown.cards === null && lib.lists.has(r.id)) {
+      loadCards(r.id);
+    }
   } else {
     renderHome(view, lib, actions);
   }
@@ -68,6 +86,37 @@ function render({ focus = false } = {}) {
     (r ? view.querySelector("h1") : document.getElementById("sidebar-title"))?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }
+}
+
+// loadCards fetches the cards of a list and shows them if that list is still
+// the open page. Errors are shown, never thrown.
+async function loadCards(listId) {
+  if (loadingFor === listId) {
+    return;
+  }
+  loadingFor = listId;
+  try {
+    const cards = await api("GET", `/api/lists/${listId}/cards`);
+    if (shown.listId === listId) {
+      shown.cards = cards;
+      render();
+    }
+  } catch (err) {
+    showStatus(err.message, true);
+    if (shown.listId === listId) {
+      shown.cards = []; // stop retrying; a reload of the page tries again
+      render();
+    }
+  } finally {
+    loadingFor = null;
+  }
+}
+
+// refreshCards fetches the open list's cards again after a change.
+function refreshCards(listId) {
+  shown = { listId, cards: shown.listId === listId ? shown.cards : null };
+  loadingFor = null;
+  return loadCards(listId);
 }
 
 // reload fetches the tree again; errors are shown, never thrown.
@@ -165,6 +214,33 @@ const actions = {
     openListDialog(lib, { list: lib.lists.get(id) }, async () => {
       await reload();
       navigate(`#/lijst/${id}`, "Opgeslagen.");
+    });
+  },
+  newCard(listId) {
+    openCardDialog(lib.lists.get(listId), {}, () => refreshCards(listId));
+  },
+  editCard(card) {
+    openCardDialog(lib.lists.get(card.listId), { card }, async () => {
+      await refreshCards(card.listId);
+      showStatus("Opgeslagen.");
+    });
+  },
+  deleteCard(card) {
+    openDeleteCardDialog(card, async () => {
+      await refreshCards(card.listId);
+      showStatus("Kaart verwijderd.");
+    });
+  },
+  pasteCards(listId) {
+    openPasteDialog(lib.lists.get(listId), async ({ added }) => {
+      await refreshCards(listId);
+      showStatus(`${added} ${added === 1 ? "kaart" : "kaarten"} toegevoegd.`);
+    });
+  },
+  importCsv(listId) {
+    openCsvDialog(lib.lists.get(listId), async ({ added }) => {
+      await refreshCards(listId);
+      showStatus(`${added} ${added === 1 ? "kaart" : "kaarten"} geïmporteerd.`);
     });
   },
   deleteHeading(id) {

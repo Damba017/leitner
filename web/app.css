@@ -735,3 +735,98 @@ dialog .stack > select {
     transition: none;
   }
 }
+
+/* A link that looks like a secondary button (downloads). */
+a.button-link {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 0.4rem;
+  text-decoration: none;
+}
+
+a.button-link:hover {
+  background: var(--hover);
+}
+
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: 0.4rem;
+}
+
+code {
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+/* Cards of a list: one row per card, sides side by side on wide screens. */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.card-side {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.card-label {
+  flex: none;
+  width: 3.25rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.card-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-note,
+.card-actions {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.card-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+button.icon {
+  flex: none;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+@media (min-width: 48rem) {
+  .card-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -29,7 +29,12 @@ func writeJSONError(w http.ResponseWriter, status int, msg string) {
 // refused, so a typo in the app shows up instead of being ignored. On
 // failure it has answered 400 and returns false.
 func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxFormBytes))
+	return readJSONMax(w, r, v, maxFormBytes)
+}
+
+// readJSONMax is readJSON with its own size limit, for imports.
+func readJSONMax(w http.ResponseWriter, r *http.Request, v any, max int64) bool {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, max))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil || dec.More() {
 		writeJSONError(w, http.StatusBadRequest, "Ongeldige aanvraag.")
@@ -64,10 +69,26 @@ var apiErrors = map[error]apiErr{
 	library.ErrStaleOrder:       {http.StatusConflict, "De inhoud is intussen veranderd. Ververs de pagina."},
 	library.ErrInvalidLang:      {http.StatusBadRequest, "Ongeldige taalcode. Gebruik bijvoorbeeld es, nl of pt-BR."},
 	library.ErrInvalidDirection: {http.StatusBadRequest, "Kies een oefenrichting."},
+	library.ErrInvalidCard: {http.StatusBadRequest,
+		fmt.Sprintf("Kant 1 en kant 2 zijn verplicht. Elk veld is hoogstens %d tekens, op één regel.", library.MaxCardText)},
+	library.ErrTooManyCards: {http.StatusBadRequest,
+		fmt.Sprintf("Te veel kaarten ineens: hoogstens %d per keer.", library.MaxImportCards)},
+}
+
+// lineReasons explain why a line of a paste or CSV was refused.
+var lineReasons = map[error]string{
+	library.ErrMissingSide: "een kaart heeft twee kanten, gescheiden door een ; (en beide zijn ingevuld)",
+	library.ErrInvalidCard: fmt.Sprintf("een veld is langer dan %d tekens of bevat een ongeldig teken", library.MaxCardText),
+	library.ErrBadCSV:      "geen geldig CSV-bestand; de eerste regel moet front,back,note zijn",
 }
 
 // apiError answers err: a known one with its message, anything else with 500.
 func apiError(w http.ResponseWriter, r *http.Request, err error) {
+	var line *library.LineError
+	if errors.As(err, &line) {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("Regel %d: %s. Er is niets toegevoegd.", line.Line, lineReasons[line.Err]))
+		return
+	}
 	for target, e := range apiErrors {
 		if errors.Is(err, target) {
 			writeJSONError(w, e.status, e.msg)

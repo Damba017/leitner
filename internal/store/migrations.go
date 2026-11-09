@@ -59,4 +59,20 @@ var migrations = []string{
 	) STRICT;
 	CREATE INDEX lists_user ON lists(user_id);
 	CREATE INDEX lists_heading ON lists(heading_id);`,
+
+	// 4: cards. Several correct answers inside one side are separated by "/"
+	// (kept as typed; the answer check splits them in phase 5). Cards keep
+	// creation order (id). Deleting a list or user cascades to its cards.
+	`CREATE TABLE cards (
+		id            INTEGER PRIMARY KEY,
+		user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		list_id       INTEGER NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+		front         TEXT NOT NULL,
+		back          TEXT NOT NULL,
+		note          TEXT NOT NULL DEFAULT '',
+		pronunciation TEXT NOT NULL DEFAULT '',
+		created_at    INTEGER NOT NULL
+	) STRICT;
+	CREATE INDEX cards_user ON cards(user_id);
+	CREATE INDEX cards_list ON cards(list_id);`,
 }

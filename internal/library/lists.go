@@ -172,3 +172,12 @@ func DeleteList(ctx context.Context, db *sql.DB, userID, id int64) error {
 	}
 	return nil
 }
+
+// GetList returns list id of userID.
+func GetList(ctx context.Context, db *sql.DB, userID, id int64) (List, error) {
+	l, err := scanList(db.QueryRowContext(ctx, "SELECT "+listColumns+" FROM lists WHERE id = ? AND user_id = ?", id, userID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return List{}, ErrNotFound
+	}
+	return l, err
+}

@@ -4,7 +4,7 @@
 import { el } from "./ui.js";
 import { api } from "./api.js";
 import { ROOT } from "./state.js";
-import { languages, isListed } from "./languages.js";
+import { languages, isListed, languageName } from "./languages.js";
 
 const OTHER = "other";
 
@@ -33,8 +33,14 @@ function setup(id) {
     submit.disabled = true;
     try {
       const result = await ctx.submit();
-      dialog.close();
-      ctx.done?.(result);
+      if (ctx.stay) {
+        // Adding several cards in a row: stay open, the caller clears the form.
+        ctx.done?.(result);
+        ctx.onStay?.(result);
+      } else {
+        dialog.close();
+        ctx.done?.(result);
+      }
     } catch (err) {
       showError(err.message);
     } finally {
@@ -43,9 +49,11 @@ function setup(id) {
   });
   dialog.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
 
-  ctx.open = (submitFn, doneFn) => {
+  ctx.open = (submitFn, doneFn, { stay = false, onStay = null } = {}) => {
     ctx.submit = submitFn;
     ctx.done = doneFn;
+    ctx.stay = stay;
+    ctx.onStay = onStay;
     showError("");
     submit.disabled = false;
     dialog.showModal();
@@ -53,12 +61,15 @@ function setup(id) {
   return ctx;
 }
 
-let headingDialog, listDialog, deleteDialog;
+let headingDialog, listDialog, deleteDialog, cardDialog, pasteDialog, csvDialog;
 
 export function setupDialogs() {
   headingDialog = setup("heading-dialog");
   listDialog = setup("list-dialog");
   deleteDialog = setup("delete-dialog");
+  cardDialog = setup("card-dialog");
+  pasteDialog = setup("paste-dialog");
+  csvDialog = setup("csv-dialog");
   for (const select of listDialog.form.querySelectorAll("select[data-other]")) {
     select.replaceChildren(
       el("option", { value: "", text: "Kies een taal" }),
@@ -200,6 +211,74 @@ export function openDeleteDialog(lib, { kind, id }, onDeleted) {
       note = `Hiermee verdwijnen ook ${parts.join(" en ")}, met alles erin. ${note}`;
     }
   }
+  if (!isHeading) {
+    note = `Hiermee verdwijnen ook alle kaarten in deze lijst. ${note}`;
+  }
   document.getElementById("delete-note").textContent = note;
   deleteDialog.open(() => api("DELETE", `/api/${isHeading ? "headings" : "lists"}/${id}`), onDeleted);
+}
+
+// openCardDialog adds cards to list one after another (the dialog stays
+// open, "Klaar" closes it), or edits card. onSaved runs after every save.
+export function openCardDialog(list, { card = null }, onSaved) {
+  const { form } = cardDialog;
+  const f = form.elements;
+  const added = document.getElementById("card-added");
+  document.getElementById("card-dialog-title").textContent = card ? "Kaart bewerken" : "Nieuwe kaart";
+  document.getElementById("card-front-label").textContent = `Kant 1 (${languageName(list.lang1)})`;
+  document.getElementById("card-back-label").textContent = `Kant 2 (${languageName(list.lang2)})`;
+  document.getElementById("card-submit").textContent = card ? "Opslaan" : "Toevoegen";
+  document.getElementById("card-close").textContent = card ? "Annuleren" : "Klaar";
+  added.hidden = true;
+  f.front.value = card?.front ?? "";
+  f.back.value = card?.back ?? "";
+  f.note.value = card?.note ?? "";
+  f.pronunciation.value = card?.pronunciation ?? "";
+
+  const submit = async () => {
+    const body = {
+      front: f.front.value,
+      back: f.back.value,
+      note: f.note.value,
+      pronunciation: f.pronunciation.value,
+    };
+    return card ? api("PUT", `/api/cards/${card.id}`, body) : api("POST", `/api/lists/${list.id}/cards`, body);
+  };
+  const onStay = (saved) => {
+    form.reset();
+    added.textContent = `Toegevoegd: ${saved.front} — ${saved.back}`;
+    added.hidden = false;
+    f.front.focus();
+  };
+  cardDialog.open(submit, onSaved, card ? {} : { stay: true, onStay });
+}
+
+// openPasteDialog adds a pasted list; onSaved gets {added}.
+export function openPasteDialog(list, onSaved) {
+  const { form } = pasteDialog;
+  form.reset();
+  pasteDialog.open(
+    () => api("POST", `/api/lists/${list.id}/paste`, { text: form.elements.text.value, swap: form.elements.swap.checked }),
+    onSaved,
+  );
+}
+
+// openCsvDialog imports a CSV file; onSaved gets {added}.
+export function openCsvDialog(list, onSaved) {
+  const { form } = csvDialog;
+  form.reset();
+  csvDialog.open(async () => {
+    const file = form.elements.file.files[0];
+    if (!file) {
+      throw new Error("Kies eerst een bestand.");
+    }
+    return api("POST", `/api/lists/${list.id}/import`, await file.text(), "text/csv");
+  }, onSaved);
+}
+
+// openDeleteCardDialog asks before deleting one card.
+export function openDeleteCardDialog(card, onDeleted) {
+  document.getElementById("delete-dialog-title").textContent = `Kaart „${card.front}” verwijderen?`;
+  document.getElementById("delete-note").textContent = "Dit kan niet ongedaan worden gemaakt.";
+  deleteDialog.open(() => api("DELETE", `/api/cards/${card.id}`), onDeleted);
 }
