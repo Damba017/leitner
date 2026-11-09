@@ -1,0 +1,78 @@
+# systemd unit for leitner on the Arch laptop. Install it and fill in the
+# Funnel name as described in deploy/README.md; check with
+# `systemd-analyze verify` and `systemd-analyze security leitner.service`.
+
+[Unit]
+Description=leitner flashcard app
+Documentation=https://github.com/Damba017/leitner/blob/main/deploy/README.md
+# Outgoing push messages (phase 9) need the network.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Like simple, but the start fails if the binary can't be executed at all.
+Type=exec
+User=leitner
+Group=leitner
+# Replace <machine>.<tailnet> with the Funnel name: no trailing slash or dot.
+# update.sh checks http://127.0.0.1:8370/login after a restart; keep -addr in sync with it.
+ExecStart=/opt/leitner/leitner serve -addr 127.0.0.1:8370 -db /var/lib/leitner/leitner.db -url https://<machine>.<tailnet>.ts.net:8443
+Restart=always
+# Wait a bit between restarts so a crash loop doesn't eat the weak CPU.
+RestartSec=5
+
+# Creates /var/lib/leitner owned by leitner before the start; the only writable path.
+StateDirectory=leitner
+# Only the leitner user can enter /var/lib/leitner.
+StateDirectoryMode=0700
+# Files the service creates (database, WAL, backups) are readable by leitner only.
+UMask=0077
+
+## Hardening
+# No capabilities at all: the app needs no root powers (port 8370 is unprivileged).
+CapabilityBoundingSet=
+# The process and its children can never gain privileges (setuid binaries etc.).
+NoNewPrivileges=yes
+# The whole file system is read-only, except the StateDirectory above.
+ProtectSystem=strict
+# /home, /root and /run/user are invisible.
+ProtectHome=yes
+# A private, empty /tmp and /var/tmp.
+PrivateTmp=yes
+# Only pseudo devices like /dev/null and /dev/urandom; no disks or hardware.
+PrivateDevices=yes
+# A user namespace: users other than leitner and root appear as "nobody".
+PrivateUsers=yes
+# /proc only shows this service's own processes, and no kernel or system info.
+ProtectProc=invisible
+ProcSubset=pid
+# Kernel settings, kernel modules, the kernel log and cgroups are read-only or hidden.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+# The system clock and the host name can't be changed.
+ProtectClock=yes
+ProtectHostname=yes
+# IPv4 and IPv6 sockets only (listening, push, DNS); no Unix, netlink or packet sockets.
+RestrictAddressFamilies=AF_INET AF_INET6
+# No new namespaces (containers), no realtime scheduling, no setuid/setgid files.
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+# Memory can't be both writable and executable (Go doesn't need it; blocks injected code).
+MemoryDenyWriteExecute=yes
+# The process can't switch to another execution domain (personality).
+LockPersonality=yes
+# SysV/POSIX IPC objects of the leitner user are removed when the service stops.
+RemoveIPC=yes
+# Only native x86_64 system calls, no 32-bit ones.
+SystemCallArchitectures=native
+# Only the system calls a normal service needs, minus privileged and resource-tuning ones.
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+# A blocked call returns EPERM, which Go handles, instead of killing the service.
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target
