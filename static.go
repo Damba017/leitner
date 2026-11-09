@@ -3,9 +3,18 @@ package main
 import (
 	"embed"
 	"io/fs"
+	"mime"
 	"net/http"
 	"path"
 )
+
+// Go's built-in table lacks .webmanifest, and the Arch laptop may have no
+// /etc/mime.types either.
+func init() {
+	if err := mime.AddExtensionType(".webmanifest", "application/manifest+json"); err != nil {
+		panic(err)
+	}
+}
 
 //go:embed web
 var webFiles embed.FS

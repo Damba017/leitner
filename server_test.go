@@ -228,3 +228,28 @@ func TestRenderUnknownPage(t *testing.T) {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
 }
+
+// The manifest, service worker and icons must load without a session (the
+// login page links them) and with the right content types.
+func TestPWAFiles(t *testing.T) {
+	app := newTestApp(t, config{})
+	for path, wantType := range map[string]string{
+		"/manifest.webmanifest":        "application/manifest+json",
+		"/sw.js":                       "text/javascript",
+		"/pwa.js":                      "text/javascript",
+		"/icon.svg":                    "image/svg+xml",
+		"/icons/icon-192.png":          "image/png",
+		"/icons/icon-512.png":          "image/png",
+		"/icons/icon-maskable-512.png": "image/png",
+		"/icons/apple-touch-icon.png":  "image/png",
+	} {
+		rec := app.do("GET", path, nil, nil)
+		if rec.Code != http.StatusOK {
+			t.Errorf("%s = %d, want 200", path, rec.Code)
+			continue
+		}
+		if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, wantType) {
+			t.Errorf("%s Content-Type = %q, want %q", path, got, wantType)
+		}
+	}
+}
