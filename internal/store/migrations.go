@@ -75,4 +75,16 @@ var migrations = []string{
 	) STRICT;
 	CREATE INDEX cards_user ON cards(user_id);
 	CREATE INDEX cards_list ON cards(list_id);`,
+
+	// 5: the spaced-repetition state per card and direction ("1-2" asks
+	// side 1 and expects side 2). No row means a new card: box 1, due now.
+	// The owner is the card's; deleting a card drops its rows.
+	`CREATE TABLE schedule (
+		card_id     INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+		direction   TEXT NOT NULL CHECK (direction IN ('1-2', '2-1')),
+		box         INTEGER NOT NULL CHECK (box BETWEEN 1 AND 5),
+		due_at      INTEGER NOT NULL,
+		reviewed_at INTEGER NOT NULL,
+		PRIMARY KEY (card_id, direction)
+	) STRICT;`,
 }

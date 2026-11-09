@@ -1,12 +1,14 @@
 // Entry point of the app (ES module): who is logged in, the tree, routing.
 // Routes are hashes, so they keep working offline later:
-// #/ (overview), #/kop/{id} (a heading), #/lijst/{id} (a list).
+// #/ (overview), #/kop/{id} (a heading), #/lijst/{id} (a list),
+// #/oefenen/kop/{id} and #/oefenen/lijst/{id} (practice what is due; with
+// /vrij at the end: practice freely).
 
 import { api } from "./api.js";
 import { showStatus } from "./ui.js";
 import { Library, ROOT, itemKey } from "./state.js";
 import { renderTree, loadOpen, saveOpen, focusMoveButton, focusToggle } from "./tree.js";
-import { renderHome, renderHeading, renderList } from "./views.js";
+import { renderHome, renderHeading, renderList, renderNotFound } from "./views.js";
 import {
   setupDialogs,
   openHeadingDialog,
@@ -18,6 +20,7 @@ import {
   openDeleteCardDialog,
 } from "./dialogs.js";
 import { makeSortable } from "./drag.js";
+import { startPractice } from "./practice.js";
 
 const app = document.getElementById("app");
 const treeRoot = document.getElementById("tree");
@@ -33,6 +36,9 @@ let pendingStatus = null; // message for the page navigate() goes to
 // The cards of the list on screen; null cards = not loaded yet.
 let shown = { listId: null, cards: null };
 let loadingFor = null; // list whose cards are being fetched
+let due = null; // due questions per list id (Map), null = unknown
+// The practice session on screen: its route key and leave().
+let session = null;
 
 // showMe fills in who is logged in and shows the Admin link to admins.
 async function showMe() {
@@ -42,8 +48,34 @@ async function showMe() {
 }
 
 function currentRoute() {
-  const m = location.hash.match(/^#\/(kop|lijst)\/(\d+)$/);
-  return m ? { kind: m[1] === "kop" ? "heading" : "list", id: Number(m[2]) } : null;
+  const m = location.hash.match(/^#\/(oefenen\/)?(kop|lijst)\/(\d+)(\/vrij)?$/);
+  if (!m || (m[4] && !m[1])) {
+    return null;
+  }
+  const practice = m[1] ? (m[4] ? "free" : "due") : null;
+  return { kind: m[2] === "kop" ? "heading" : "list", id: Number(m[3]), practice };
+}
+
+// dueCount is the number of due questions in a list or heading; null if unknown.
+function dueCount(kind, id) {
+  if (!due) {
+    return null;
+  }
+  const ids = kind === "heading" ? lib.listsIn(id) : [id];
+  return ids.reduce((n, listId) => n + (due.get(listId) ?? 0), 0);
+}
+
+// loadDue fetches the due counts and redraws, except during practice.
+async function loadDue() {
+  try {
+    const { lists } = await api("GET", "/api/due");
+    due = new Map(Object.entries(lists).map(([id, n]) => [Number(id), n]));
+  } catch {
+    due = null; // the buttons then show no number
+  }
+  if (!session) {
+    render();
+  }
 }
 
 // revealCurrent expands the headings above the open page.
@@ -67,15 +99,33 @@ function renderSidebar() {
 // keyboard and screen reader users after navigating.
 function render({ focus = false } = {}) {
   const r = currentRoute();
-  app.dataset.route = r ? r.kind : "home";
+  app.dataset.route = r ? (r.practice ? "practice" : r.kind) : "home";
   renderSidebar();
+  const key = r?.practice ? location.hash : null;
+  if (session && session.key !== key) {
+    session.leave();
+    session = null;
+  }
+  if (r?.practice) {
+    // A session draws itself; redraws of the sidebar leave it alone.
+    const exists = (r.kind === "heading" ? lib.headings : lib.lists).has(r.id);
+    if (!session && exists) {
+      session = { key, leave: startPractice(view, lib, { kind: r.kind, id: r.id, mode: r.practice }, loadDue) };
+    } else if (!exists) {
+      renderNotFound(view);
+    }
+    if (focus) {
+      window.scrollTo(0, 0);
+    }
+    return;
+  }
   if (r?.kind === "heading") {
-    renderHeading(view, lib, r.id, actions);
+    renderHeading(view, lib, r.id, actions, dueCount("heading", r.id));
   } else if (r?.kind === "list") {
     if (shown.listId !== r.id) {
       shown = { listId: r.id, cards: null };
     }
-    renderList(view, lib, r.id, actions, shown.cards);
+    renderList(view, lib, r.id, actions, shown.cards, dueCount("list", r.id));
     if (shown.cards === null && lib.lists.has(r.id)) {
       loadCards(r.id);
     }
@@ -112,10 +162,12 @@ async function loadCards(listId) {
   }
 }
 
-// refreshCards fetches the open list's cards again after a change.
+// refreshCards fetches the open list's cards (and the due counts) again
+// after a change.
 function refreshCards(listId) {
   shown = { listId, cards: shown.listId === listId ? shown.cards : null };
   loadingFor = null;
+  loadDue();
   return loadCards(listId);
 }
 
@@ -133,6 +185,7 @@ async function reload() {
     showStatus(err.message, true);
   }
   render();
+  loadDue();
 }
 
 // navigate goes to hash and shows message there.

@@ -143,9 +143,12 @@ type Export struct {
 	Headings   []Heading `json:"headings"`
 	Lists      []List    `json:"lists"`
 	Cards      []Card    `json:"cards"`
+	// Schedule is the Leitner state of every card direction answered at
+	// least once; a card direction that isn't in it is new (box 1).
+	Schedule []ScheduleEntry `json:"schedule"`
 }
 
-// ExportUser collects the headings, lists and cards of userID.
+// ExportUser collects the headings, lists, cards and schedule of userID.
 func ExportUser(ctx context.Context, db *sql.DB, userID int64) (Export, error) {
 	tree, err := GetTree(ctx, db, userID)
 	if err != nil {
@@ -165,5 +168,11 @@ func ExportUser(ctx context.Context, db *sql.DB, userID int64) (Export, error) {
 		}
 		e.Cards = append(e.Cards, c)
 	}
-	return e, rows.Err()
+	if err := rows.Err(); err != nil {
+		return Export{}, err
+	}
+	if e.Schedule, err = exportSchedule(ctx, db, userID); err != nil {
+		return Export{}, err
+	}
+	return e, nil
 }

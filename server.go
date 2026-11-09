@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Damba017/leitner/internal/auth"
+	"github.com/Damba017/leitner/internal/srs"
 )
 
 type config struct {
@@ -28,6 +29,7 @@ type server struct {
 	db      *sql.DB
 	pages   pages
 	limiter *auth.Limiter // failed password checks, per IP and per user
+	sched   srs.Scheduler // spaced repetition; due dates fall on Amsterdam days
 	// secureCookies marks the session cookie Secure. -url is https-only and
 	// always set in production; without it (local http) Secure would break login.
 	secureCookies bool
@@ -40,6 +42,7 @@ func newHandler(db *sql.DB, cfg config) http.Handler {
 		db:            db,
 		pages:         mustParsePages(),
 		limiter:       auth.NewLimiter(5, 15*time.Minute),
+		sched:         srs.Leitner{Loc: amsterdam},
 		secureCookies: cfg.baseURL != "",
 		publicFiles:   publicFiles(web),
 	}
@@ -69,6 +72,9 @@ func newHandler(db *sql.DB, cfg config) http.Handler {
 	mux.HandleFunc("PUT /api/cards/{id}", s.apiUpdateCard)
 	mux.HandleFunc("DELETE /api/cards/{id}", s.apiDeleteCard)
 	mux.HandleFunc("GET /api/export.json", s.apiExportJSON)
+	mux.HandleFunc("GET /api/practice", s.apiPractice)
+	mux.HandleFunc("POST /api/reviews", s.apiReview)
+	mux.HandleFunc("GET /api/due", s.apiDue)
 	mux.HandleFunc("GET /account", s.accountPage)
 	mux.HandleFunc("POST /account/password", s.changePassword)
 	mux.Handle("GET /admin", s.adminOnly(s.adminPage))

@@ -1,6 +1,7 @@
-// Flash card with a flip animation, for the card pages (phase 4) and
-// practice (phase 5). The card is a button: click, Enter or Space flips it.
-// Only the face that's showing is visible to screen readers (see app.css).
+// Flash card with a flip animation, used by practice (practice.js). An
+// interactive card is a button: click, Enter or Space flips it; practice
+// uses a plain one and flips it when the answer is checked. Only the face
+// that's showing is visible to screen readers (see app.css).
 
 import { el } from "./ui.js";
 

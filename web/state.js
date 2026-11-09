@@ -78,6 +78,22 @@ export class Library {
     return count;
   }
 
+  // listsIn returns the ids of all lists inside a heading, at every level.
+  listsIn(headingId) {
+    const ids = [];
+    const walk = (id) => {
+      for (const item of this.children(id)) {
+        if (item.kind === "heading") {
+          walk(item.id);
+        } else {
+          ids.push(item.id);
+        }
+      }
+    };
+    walk(headingId);
+    return ids;
+  }
+
   // headingOptions lists all headings in tree order with their depth (0 at
   // the top), leaving out the subtree of skipId: a heading can't move there.
   headingOptions(skipId = null) {

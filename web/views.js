@@ -3,6 +3,7 @@
 import { el } from "./ui.js";
 import { languageName } from "./languages.js";
 import { canSpeak, speak, spokenText } from "./speech.js";
+import { practiceHash } from "./practice.js";
 
 const directions = {
   "1-2": "Kant 1 → kant 2",
@@ -31,6 +32,20 @@ function crumbs(path, current) {
   );
 }
 
+// practiceRow links to practicing a list or heading; due is the number of
+// due questions in it (null while unknown).
+function practiceRow(kind, id, due) {
+  const label = due === null ? "Oefenen" : `Oefenen (${due} te doen)`;
+  return el(
+    "div",
+    { class: "row actions" },
+    due === 0
+      ? el("span", { class: "muted", text: "Niets te doen." })
+      : el("a", { class: "button-link primary", href: practiceHash(kind, id, "due"), text: label }),
+    el("a", { class: "button-link", href: practiceHash(kind, id, "free"), text: "Vrij oefenen" }),
+  );
+}
+
 export function renderHome(view, lib, actions) {
   const empty = lib.headings.size === 0;
   view.replaceChildren(
@@ -47,7 +62,7 @@ export function renderHome(view, lib, actions) {
   );
 }
 
-export function renderHeading(view, lib, id, actions) {
+export function renderHeading(view, lib, id, actions, due) {
   const heading = lib.headings.get(id);
   if (!heading) {
     renderNotFound(view);
@@ -58,6 +73,7 @@ export function renderHeading(view, lib, id, actions) {
     backLink(),
     crumbs(lib.path(heading.parentId), heading.name),
     title(heading.name, "📂"),
+    practiceRow("heading", id, due),
     el(
       "div",
       { class: "row actions" },
@@ -124,8 +140,8 @@ function cardRow(list, card, actions) {
 }
 
 // renderList shows a list with its settings and cards; cards is null while
-// they are loading.
-export function renderList(view, lib, id, actions, cards) {
+// they are loading, due the number of due questions (null while unknown).
+export function renderList(view, lib, id, actions, cards, due) {
   const list = lib.lists.get(id);
   if (!list) {
     renderNotFound(view);
@@ -136,6 +152,7 @@ export function renderList(view, lib, id, actions, cards) {
     backLink(),
     crumbs(lib.path(list.headingId), list.name),
     title(list.name, "📄"),
+    practiceRow("list", id, due),
     el(
       "div",
       { class: "row actions" },
