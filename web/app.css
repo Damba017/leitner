@@ -374,6 +374,22 @@ button:disabled {
   border-left-color: var(--danger);
 }
 
+/* Offline: read-only. offline.js shows the banner and sets data-offline;
+   everything that needs the server is marked data-online. */
+.offline-banner {
+  margin: 0;
+  padding: 0.4rem max(1rem, env(safe-area-inset-right)) 0.4rem max(1rem, env(safe-area-inset-left));
+  color: var(--text);
+  background: var(--current);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+html[data-offline] [data-online] {
+  display: none !important;
+}
+
 .sidebar {
   min-width: 0;
 }

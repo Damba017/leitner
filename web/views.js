@@ -56,11 +56,11 @@ export function renderHome(view, lib, actions) {
         : "Kies links een kop of lijst.",
     }),
     ...(empty
-      ? [el("button", { type: "button", onclick: () => actions.newHeading(null), text: "+ Nieuwe kop" })]
+      ? [el("button", { type: "button", "data-online": true, onclick: () => actions.newHeading(null), text: "+ Nieuwe kop" })]
       : [
-          el("h2", { text: "Back-up" }),
-          el("p", { class: "hint", text: "Alle koppen, lijsten en kaarten in één JSON-bestand." }),
-          el("p", {}, el("a", { class: "button-link", href: "/api/export.json", download: "", text: "Alles downloaden (JSON)" })),
+          el("h2", { "data-online": true, text: "Back-up" }),
+          el("p", { class: "hint", "data-online": true, text: "Alle koppen, lijsten en kaarten in één JSON-bestand." }),
+          el("p", { "data-online": true }, el("a", { class: "button-link", href: "/api/export.json", download: "", text: "Alles downloaden (JSON)" })),
         ]),
   );
 }
@@ -79,7 +79,7 @@ export function renderHeading(view, lib, id, actions, due) {
     practiceRow("heading", id, due),
     el(
       "div",
-      { class: "row actions" },
+      { class: "row actions", "data-online": true },
       el("button", { type: "button", onclick: () => actions.newList(id), text: "+ Nieuwe lijst" }),
       el("button", { type: "button", class: "secondary", onclick: () => actions.newHeading(id), text: "+ Nieuwe subkop" }),
       el("button", { type: "button", class: "secondary", onclick: () => actions.editHeading(id), text: "Bewerken" }),
@@ -135,7 +135,7 @@ function cardRow(list, card, actions) {
     card.note ? el("p", { class: "card-note" }, el("span", { class: "visually-hidden", text: "Notitie: " }), card.note) : null,
     el(
       "div",
-      { class: "row card-actions" },
+      { class: "row card-actions", "data-online": true },
       el("button", { type: "button", class: "secondary small", onclick: () => actions.editCard(card), text: "Bewerken" }),
       el("button", { type: "button", class: "danger small", onclick: () => actions.deleteCard(card), text: "Verwijderen" }),
     ),
@@ -158,7 +158,7 @@ export function renderList(view, lib, id, actions, cards, due) {
     practiceRow("list", id, due),
     el(
       "div",
-      { class: "row actions" },
+      { class: "row actions", "data-online": true },
       el("button", { type: "button", class: "secondary", onclick: () => actions.editList(id), text: "Bewerken" }),
       el("button", { type: "button", class: "danger", onclick: () => actions.deleteList(id), text: "Verwijderen" }),
     ),
@@ -181,7 +181,7 @@ export function renderList(view, lib, id, actions, cards, due) {
     el("h2", { text: cards ? `Kaarten (${cards.length})` : "Kaarten" }),
     el(
       "div",
-      { class: "row actions" },
+      { class: "row actions", "data-online": true },
       el("button", { type: "button", onclick: () => actions.newCard(id), text: "+ Nieuwe kaart" }),
       el("button", { type: "button", class: "secondary", onclick: () => actions.pasteCards(id), text: "Lijst plakken" }),
       el("button", { type: "button", class: "secondary", onclick: () => actions.importCsv(id), text: "CSV importeren" }),

@@ -18,8 +18,8 @@
 <header class="topbar">
   <nav class="menu" aria-label="Hoofdmenu">
     <a href="#/" aria-current="page">Leitner</a>
-    <a href="/account">Account</a>
-    <a href="/admin" id="admin-link" hidden>Admin</a>
+    <a href="/account" data-online>Account</a>
+    <a href="/admin" id="admin-link" data-online hidden>Admin</a>
   </nav>
   <div class="who">
     <label class="theme-pick">
@@ -31,9 +31,10 @@
       </select>
     </label>
     <span class="muted" id="me"></span>
-    <form method="post" action="/logout"><button class="link">Uitloggen</button></form>
+    <form method="post" action="/logout" data-online><button class="link">Uitloggen</button></form>
   </div>
 </header>
+<p class="offline-banner" id="offline-banner" role="status" hidden>Offline — alleen lezen. Oefenen kan, maar antwoorden worden niet bewaard.</p>
 
 <div class="app" id="app" data-route="home">
   <p class="status" id="status" role="status" hidden></p>
@@ -41,11 +42,11 @@
   <aside class="sidebar" aria-labelledby="sidebar-title">
     <div class="sidebar-head">
       <h2 id="sidebar-title" tabindex="-1">Overzicht</h2>
-      <button type="button" class="secondary small" id="order-toggle" aria-pressed="false">Ordenen</button>
+      <button type="button" class="secondary small" id="order-toggle" aria-pressed="false" data-online>Ordenen</button>
     </div>
     <p class="hint" id="order-hint" hidden>Sleep aan ⠿ of gebruik ↑ en ↓. Naar een andere kop verplaatsen gaat via Bewerken.</p>
     <div id="tree" class="tree"></div>
-    <button type="button" class="secondary" id="add-top">+ Nieuwe kop</button>
+    <button type="button" class="secondary" id="add-top" data-online>+ Nieuwe kop</button>
   </aside>
 
   <main class="main" id="view"></main>

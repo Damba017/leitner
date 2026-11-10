@@ -36,12 +36,15 @@ function speakButton(label, side) {
     : null;
 }
 
-// startPractice runs a session on route ({kind, id, mode}) in view. onEnd
-// runs once the stored answers are in, so due counts can be fetched again.
-// It returns leave(), which stores a pending answer; call it when the page
-// changes.
-export function startPractice(view, lib, route, onEnd) {
+// startPractice runs a session on route ({kind, id, mode}) in view.
+// loadItems(route) resolves to {items, offline}: a session on offline items
+// stores nothing, even if the server comes back. onEnd runs once the stored
+// answers are in, so due counts can be fetched again; onUnreachable when
+// storing an answer finds the server gone. It returns leave(), which stores a
+// pending answer; call it when the page changes.
+export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachable }) {
   const due = route.mode === "due";
+  let storing = false; // answers go to the server: due and online at the start
   const scope = (route.kind === "heading" ? lib.headings : lib.lists).get(route.id);
   const name = scope?.name ?? "";
   const backHash = route.kind === "heading" ? `#/kop/${route.id}` : `#/lijst/${route.id}`;
@@ -64,10 +67,21 @@ export function startPractice(view, lib, route, onEnd) {
   view.querySelector("h1").focus({ preventScroll: true });
 
   // record stores an answer of a due session; failures are shown, the
-  // session goes on.
+  // session goes on. Without the server, later answers aren't stored.
   function record(item, correct, keepalive = false) {
+    if (!storing) {
+      return;
+    }
     const p = api("POST", "/api/reviews", { cardId: item.id, direction: item.direction, correct }, undefined, keepalive)
-      .catch((err) => showStatus(err.message, true));
+      .catch((err) => {
+        if (err.unreachable && storing) {
+          storing = false;
+          onUnreachable(); // clears the status line, so the message comes after
+          showStatus("Geen verbinding: je antwoorden worden niet meer bewaard.", true);
+        } else if (!err.unreachable) {
+          showStatus(err.message, true);
+        }
+      });
     posts.push(p);
   }
 
@@ -94,8 +108,9 @@ export function startPractice(view, lib, route, onEnd) {
     body.replaceChildren(el("p", { text: "Kaarten laden…" }));
     let items;
     try {
-      const param = route.kind === "heading" ? "heading" : "list";
-      ({ items } = await api("GET", `/api/practice?${param}=${route.id}&mode=${route.mode}`));
+      let offline;
+      ({ items, offline } = await loadItems(route));
+      storing = due && !offline; // a due session loads once: fixed for the session
     } catch (err) {
       if (!left) {
         message(el("p", { class: "error", role: "alert", text: err.message }), backLink());
@@ -191,6 +206,7 @@ export function startPractice(view, lib, route, onEnd) {
     ui = { card, input, submit, feedback, note, answerSpeak, override, list, answer };
     body.replaceChildren(
       el("p", { class: "practice-progress muted", text: progressText() }),
+      due && !storing ? el("p", { class: "hint", text: "Offline: je antwoorden worden niet bewaard." }) : null,
       card.element,
       el("div", { class: "row practice-speak" }, speakButton("Vraag", ask), answerSpeak),
       form,
@@ -291,7 +307,8 @@ export function startPractice(view, lib, route, onEnd) {
     message(
       el("h2", { tabindex: "-1", text: "Klaar!" }),
       el("p", { text: `${firstRight} van ${total} in één keer goed.` }),
-      due ? el("p", { class: "hint", text: "Je antwoorden zijn bewaard. Elke kaart komt terug zodra hij weer te doen is." }) : null,
+      due && storing ? el("p", { class: "hint", text: "Je antwoorden zijn bewaard. Elke kaart komt terug zodra hij weer te doen is." }) : null,
+      due && !storing ? el("p", { class: "hint", text: "Je antwoorden zijn niet bewaard: je was offline." }) : null,
       el(
         "div",
         { class: "row actions" },

@@ -177,3 +177,27 @@ func (s *server) apiExportJSON(w http.ResponseWriter, r *http.Request) {
 	download(w, "application/json", "leitner-"+time.Now().Format("20060102")+".json")
 	w.Write(data)
 }
+
+// offlineSnapshot is everything the app needs to open without the server:
+// who is logged in, the tree, every card and the schedule.
+type offlineSnapshot struct {
+	Me struct {
+		Username string `json:"username"`
+		IsAdmin  bool   `json:"isAdmin"`
+	} `json:"me"`
+	library.Export
+}
+
+// apiOffline answers the snapshot the app keeps on the device for offline use.
+func (s *server) apiOffline(w http.ResponseWriter, r *http.Request) {
+	me, _ := currentUser(r)
+	export, err := library.ExportUser(r.Context(), s.db, me.ID)
+	if err != nil {
+		apiError(w, r, err)
+		return
+	}
+	snap := offlineSnapshot{Export: export}
+	snap.Me.Username = me.Username
+	snap.Me.IsAdmin = me.IsAdmin
+	writeJSON(w, http.StatusOK, snap)
+}

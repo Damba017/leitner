@@ -1,4 +1,4 @@
-// Table tests for web/answer.js. Run by answer_test.go as
+// Table tests for web/answer.js. Run by js_test.go as
 // `jsc -m testdata/answer_test.js`; prints each failure and throws if any.
 
 import { checkAnswer, shuffle, askedDirection } from "../web/answer.js";

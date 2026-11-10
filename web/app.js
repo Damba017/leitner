@@ -1,10 +1,17 @@
-// Entry point of the app (ES module): who is logged in, the tree, routing.
-// Routes are hashes, so they keep working offline later:
+// Entry point of the app (ES module): who is logged in, the tree, routing,
+// offline mode. Routes are hashes, so they work offline too:
 // #/ (overview), #/kop/{id} (a heading), #/lijst/{id} (a list),
 // #/oefenen/kop/{id} and #/oefenen/lijst/{id} (practice what is due; with
 // /vrij at the end: practice freely).
+//
+// Offline: when the server can't be reached (not just navigator.onLine), the
+// app shows the snapshot kept on the device, read-only. It tries the server
+// again on its own and whenever the app comes back to the foreground; once it
+// answers, everything is fetched again.
 
 import { api } from "./api.js";
+import { isOffline, setOffline, saveSnapshot, loadSnapshot } from "./offline.js";
+import { practiceItems, dueCounts } from "./due.js";
 import { showStatus } from "./ui.js";
 import { Library, ROOT, itemKey } from "./state.js";
 import { renderTree, loadOpen, saveOpen, focusMoveButton, focusToggle } from "./tree.js";
@@ -39,12 +46,111 @@ let loadingFor = null; // list whose cards are being fetched
 let due = null; // due questions per list id (Map), null = unknown
 // The practice session on screen: its route key and leave().
 let session = null;
+// The user's data as last kept on the device (GET /api/offline); used while
+// offline, null if there is none.
+let snapshot = null;
+let retryTimer = 0;
+let retryDelay = 0; // s; while offline the server is tried again after this
 
 // showMe fills in who is logged in and shows the Admin link to admins.
-async function showMe() {
-  const me = await api("GET", "/api/me");
+function showMe(me) {
   document.getElementById("me").textContent = `Ingelogd als ${me.username}`;
   document.getElementById("admin-link").hidden = !me.isAdmin;
+}
+
+// setLibrary replaces the tree and forgets expanded headings that are gone.
+function setLibrary(tree) {
+  lib = new Library(tree);
+  for (const id of open) {
+    if (!lib.headings.has(id)) {
+      open.delete(id);
+    }
+  }
+  saveOpen(open);
+}
+
+function setOrdering(on) {
+  ordering = on;
+  orderToggle.setAttribute("aria-pressed", String(on));
+  orderHint.hidden = !on;
+  renderSidebar();
+}
+
+// goOffline switches to the kept snapshot, read-only, and plans the next try
+// of the server. Only the switch itself redraws the page.
+async function goOffline() {
+  clearTimeout(retryTimer);
+  retryDelay = Math.min(retryDelay ? retryDelay * 2 : 5, 60);
+  retryTimer = setTimeout(reload, retryDelay * 1000);
+  if (isOffline()) {
+    return;
+  }
+  setOffline(true);
+  if (ordering) {
+    setOrdering(false);
+  }
+  // The one in memory is as new as the kept one, and there even if keeping it failed.
+  snapshot = snapshot ?? (await loadSnapshot());
+  if (snapshot) {
+    setLibrary(snapshot);
+    showMe(snapshot.me);
+    showStatus("");
+  } else {
+    showStatus("Offline, en er staat nog niets op dit apparaat.", true);
+  }
+  shown = { listId: shown.listId, cards: null };
+  due = snapshot ? dueCounts(snapshot, Date.now()) : null;
+  revealCurrent();
+  render();
+}
+
+// backOnline leaves offline mode; the caller fetches everything again.
+function backOnline() {
+  clearTimeout(retryTimer);
+  retryDelay = 0;
+  setOffline(false);
+  showStatus("");
+  shown = { listId: shown.listId, cards: null };
+}
+
+// refreshSnapshot keeps the user's current data on the device.
+async function refreshSnapshot() {
+  try {
+    const data = await api("GET", "/api/offline");
+    if (!isOffline()) {
+      snapshot = data;
+      await saveSnapshot(data);
+    }
+  } catch (err) {
+    if (err.unreachable) {
+      goOffline();
+    }
+  }
+}
+
+// offlineItems is loadItems for a practice session, from the snapshot.
+function offlineItems(route) {
+  const ids = route.kind === "heading" ? lib.listsIn(route.id) : [route.id];
+  return { items: snapshot ? practiceItems(snapshot, ids, route.mode, Date.now()) : [], offline: true };
+}
+
+// loadItems gives a practice session its questions: from the server, or
+// from the snapshot when offline (then nothing is stored).
+async function loadItems(route) {
+  if (isOffline()) {
+    return offlineItems(route);
+  }
+  try {
+    const param = route.kind === "heading" ? "heading" : "list";
+    const { items } = await api("GET", `/api/practice?${param}=${route.id}&mode=${route.mode}`);
+    return { items, offline: false };
+  } catch (err) {
+    if (!err.unreachable) {
+      throw err;
+    }
+    await goOffline();
+    return offlineItems(route);
+  }
 }
 
 function currentRoute() {
@@ -66,16 +172,30 @@ function dueCount(kind, id) {
 }
 
 // loadDue fetches the due counts and redraws, except during practice.
+// Online it then also refreshes the snapshot: it runs after every change.
+// Offline the counts come from the snapshot, at the current time.
 async function loadDue() {
+  if (isOffline()) {
+    due = snapshot ? dueCounts(snapshot, Date.now()) : null;
+    if (!session) {
+      render();
+    }
+    return;
+  }
   try {
     const { lists } = await api("GET", "/api/due");
     due = new Map(Object.entries(lists).map(([id, n]) => [Number(id), n]));
-  } catch {
+  } catch (err) {
+    if (err.unreachable) {
+      goOffline();
+      return;
+    }
     due = null; // the buttons then show no number
   }
   if (!session) {
     render();
   }
+  refreshSnapshot();
 }
 
 // revealCurrent expands the headings above the open page.
@@ -110,7 +230,8 @@ function render({ focus = false } = {}) {
     // A session draws itself; redraws of the sidebar leave it alone.
     const exists = (r.kind === "heading" ? lib.headings : lib.lists).has(r.id);
     if (!session && exists) {
-      session = { key, leave: startPractice(view, lib, { kind: r.kind, id: r.id, mode: r.practice }, loadDue) };
+      const route = { kind: r.kind, id: r.id, mode: r.practice };
+      session = { key, leave: startPractice(view, lib, route, { loadItems, onEnd: loadDue, onUnreachable: goOffline }) };
     } else if (!exists) {
       renderNotFound(view);
     }
@@ -124,6 +245,9 @@ function render({ focus = false } = {}) {
   } else if (r?.kind === "list") {
     if (shown.listId !== r.id) {
       shown = { listId: r.id, cards: null };
+    }
+    if (shown.cards === null && isOffline()) {
+      shown.cards = snapshot ? snapshot.cards.filter((c) => c.listId === r.id) : [];
     }
     renderList(view, lib, r.id, actions, shown.cards, dueCount("list", r.id));
     if (shown.cards === null && lib.lists.has(r.id)) {
@@ -152,6 +276,10 @@ async function loadCards(listId) {
       render();
     }
   } catch (err) {
+    if (err.unreachable) {
+      goOffline(); // shows the kept cards
+      return;
+    }
     showStatus(err.message, true);
     if (shown.listId === listId) {
       shown.cards = []; // stop retrying; a reload of the page tries again
@@ -171,19 +299,27 @@ function refreshCards(listId) {
   return loadCards(listId);
 }
 
-// reload fetches the tree again; errors are shown, never thrown.
+// reload fetches who is logged in and the tree again; errors are shown,
+// never thrown. It is also the offline check: unreachable means offline, an
+// answer ends offline mode.
 async function reload() {
+  let me, tree;
   try {
-    lib = new Library(await api("GET", "/api/tree"));
-    for (const id of open) {
-      if (!lib.headings.has(id)) {
-        open.delete(id);
-      }
-    }
-    saveOpen(open);
+    [me, tree] = await Promise.all([api("GET", "/api/me"), api("GET", "/api/tree")]);
   } catch (err) {
+    if (err.unreachable) {
+      await goOffline();
+      return;
+    }
     showStatus(err.message, true);
+    render();
+    return;
   }
+  if (isOffline()) {
+    backOnline();
+  }
+  showMe(me);
+  setLibrary(tree);
   render();
   loadDue();
 }
@@ -314,12 +450,7 @@ const actions = {
 
 setupDialogs();
 document.getElementById("add-top").addEventListener("click", () => actions.newHeading(null));
-orderToggle.addEventListener("click", () => {
-  ordering = !ordering;
-  orderToggle.setAttribute("aria-pressed", String(ordering));
-  orderHint.hidden = !ordering;
-  renderSidebar();
-});
+orderToggle.addEventListener("click", () => setOrdering(!ordering));
 makeSortable(treeRoot, {
   itemSelector: ".tree-item",
   handleSelector: ".drag-handle",
@@ -330,5 +461,23 @@ makeSortable(treeRoot, {
   },
 });
 
-showMe().catch((err) => showStatus(err.message, true));
-reload().then(revealCurrent).then(() => render());
+// Back in the foreground (iOS keeps a closed app around), or the network
+// is back: check the server and fetch everything again. Offline that also
+// brings the due counts up to date.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    if (isOffline()) {
+      loadDue();
+    }
+    reload();
+  }
+});
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    reload(); // restored from the back/forward cache
+  }
+});
+window.addEventListener("online", reload);
+window.addEventListener("offline", goOffline);
+
+(navigator.onLine === false ? goOffline() : reload()).then(revealCurrent).then(() => render());

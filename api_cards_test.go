@@ -135,3 +135,42 @@ func TestAPICardsPrivate(t *testing.T) {
 		t.Errorf("anna's cards changed: %+v", got)
 	}
 }
+
+func TestAPIOffline(t *testing.T) {
+	app := newTestApp(t, config{})
+	anna := app.session(app.addUser("anna", false))
+	bert := app.session(app.addUser("bert", true))
+	list := newTestList(t, app, anna)
+	card := decode[library.Card](t, app.doJSON("POST", fmt.Sprintf("/api/lists/%d/cards", list), `{"front":"enero","back":"januari"}`, anna)).ID
+	wantStatus(t, app.doJSON("POST", "/api/reviews", fmt.Sprintf(`{"cardId":%d,"direction":"1-2","correct":true}`, card), anna), http.StatusOK, "")
+
+	rec := app.doJSON("GET", "/api/offline", "", anna)
+	wantStatus(t, rec, http.StatusOK, "")
+	if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Errorf("Cache-Control = %q", cc)
+	}
+	type snapshot struct {
+		Me struct {
+			Username string `json:"username"`
+			IsAdmin  bool   `json:"isAdmin"`
+		} `json:"me"`
+		library.Export
+	}
+	got := decode[snapshot](t, rec)
+	if got.Me.Username != "anna" || got.Me.IsAdmin {
+		t.Errorf("me = %+v", got.Me)
+	}
+	if len(got.Headings) != 1 || len(got.Lists) != 1 || len(got.Cards) != 1 || got.Cards[0].Front != "enero" {
+		t.Errorf("snapshot = %+v", got.Export)
+	}
+	if len(got.Schedule) != 1 || got.Schedule[0].CardID != card || got.Schedule[0].Box != 2 {
+		t.Errorf("schedule = %+v", got.Schedule)
+	}
+
+	// Only the user's own data, and only with a session.
+	other := decode[snapshot](t, app.doJSON("GET", "/api/offline", "", bert))
+	if other.Me.Username != "bert" || !other.Me.IsAdmin || len(other.Lists)+len(other.Cards)+len(other.Schedule) != 0 {
+		t.Errorf("bert's snapshot = %+v", other)
+	}
+	wantStatus(t, app.doJSON("GET", "/api/offline", "", nil), http.StatusUnauthorized, "")
+}

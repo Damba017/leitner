@@ -1,9 +1,23 @@
 // JSON API client. Errors carry the server's Dutch message, ready to show.
 
+import { dropSnapshot } from "./offline.js";
+
+// Funnel answers like this while the server is down or restarting.
+const GATEWAY_ERRORS = new Set([502, 503, 504]);
+// A read waits this long; then the server counts as unreachable. Writes have
+// no limit: they may still be applied after the app gave up on them.
+const READ_TIMEOUT = 10000; // ms
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
     this.status = status;
+  }
+
+  // unreachable: no answer from the server itself (no network, timeout, or
+  // the server is down behind Funnel).
+  get unreachable() {
+    return this.status === 0 || GATEWAY_ERRORS.has(this.status);
   }
 }
 
@@ -17,6 +31,9 @@ export async function api(method, path, body, rawType, keepalive = false) {
     options.headers["Content-Type"] = rawType ?? "application/json";
     options.body = rawType ? body : JSON.stringify(body);
   }
+  if (method === "GET" && typeof AbortSignal.timeout === "function") {
+    options.signal = AbortSignal.timeout(READ_TIMEOUT);
+  }
   let res;
   try {
     res = await fetch(path, options);
@@ -24,8 +41,12 @@ export async function api(method, path, body, rawType, keepalive = false) {
     throw new ApiError("Geen verbinding met de server.", 0);
   }
   if (res.status === 401) {
+    await dropSnapshot();
     location.href = "/login";
     throw new ApiError("Niet ingelogd.", 401);
+  }
+  if (GATEWAY_ERRORS.has(res.status)) {
+    throw new ApiError("Geen verbinding met de server.", res.status);
   }
   if (res.status === 204) {
     return null;

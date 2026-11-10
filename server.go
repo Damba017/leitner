@@ -49,6 +49,7 @@ func newHandler(db *sql.DB, cfg config) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /", s.static(web))
+	mux.Handle("GET /sw.js", serviceWorker(web))
 	mux.HandleFunc("GET /login", s.loginPage)
 	mux.HandleFunc("POST /login", s.login)
 	mux.HandleFunc("GET /register", s.registerPage)
@@ -72,6 +73,7 @@ func newHandler(db *sql.DB, cfg config) http.Handler {
 	mux.HandleFunc("PUT /api/cards/{id}", s.apiUpdateCard)
 	mux.HandleFunc("DELETE /api/cards/{id}", s.apiDeleteCard)
 	mux.HandleFunc("GET /api/export.json", s.apiExportJSON)
+	mux.HandleFunc("GET /api/offline", s.apiOffline)
 	mux.HandleFunc("GET /api/practice", s.apiPractice)
 	mux.HandleFunc("POST /api/reviews", s.apiReview)
 	mux.HandleFunc("GET /api/due", s.apiDue)
