@@ -1,22 +1,29 @@
 /* Themes only via these variables. Light by default; dark follows the
    system unless the device chose light, or when it chose dark (theme.js sets
    data-theme). The dark values appear twice because CSS can't share them
-   between a media query and an attribute selector without a build step. */
+   between a media query and an attribute selector without a build step.
+   Contrast (WCAG AA) is noted against --surface unless said otherwise. */
 :root {
   color-scheme: light;
   --bg: #f6f8f7;
   --surface: #ffffff;
   --text: #1c2421;
-  --muted: #4d5a56;
-  --accent: #23706a; /* calm blue-green, 5.4:1 on --bg */
+  --muted: #4d5a56; /* 7.2:1; 5.8:1 on --current */
+  --accent: #23706a; /* calm blue-green, 5.8:1; 5.0:1 on --accent-soft */
+  --accent-hover: #1b5d58;
+  --accent-soft: #e1f0ec; /* right answers, notices, counts */
   --border: #d5ddda;
-  --field-border: #6f7d79; /* 4.3:1 on --surface: form fields need 3:1 */
+  --border-strong: #b7c4bf; /* secondary buttons, dashed empty states */
+  --field-border: #6f7d79; /* 4.3:1: form fields need 3:1 */
+  --placeholder: #68756f; /* 4.8:1 */
   --focus: #23706a;
-  --on-accent: #ffffff; /* 5.8:1 on --accent */
-  --danger: #b3261e; /* 6.1:1 on --bg */
+  --on-accent: #ffffff; /* 5.8:1 on --accent, 7.6:1 on --accent-hover */
+  --danger: #b3261e; /* 6.5:1; 5.7:1 on --danger-soft */
+  --danger-soft: #fbebe9; /* wrong answers, errors */
   --hover: #e9f0ee;
   --current: #d9ebe7; /* tree row of the open page; --text and --accent stay AA on it */
-  --shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(16 24 22 / 0.06);
+  --shadow: 0 1px 3px rgb(16 24 22 / 0.08), 0 8px 24px rgb(16 24 22 / 0.07);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,14 +34,20 @@
     --text: #e3ebe8;
     --muted: #a7b4b0;
     --accent: #6cc5b8;
+    --accent-hover: #88d4c8;
+    --accent-soft: #1b3633;
     --border: #33403d;
+    --border-strong: #4b5a56;
     --field-border: #7d8b87;
+    --placeholder: #8f9c98;
     --focus: #6cc5b8;
     --on-accent: #141a19;
     --danger: #f2b8b5;
+    --danger-soft: #3a2422;
     --hover: #232d2b;
     --current: #1f3a36;
-    --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.3);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.3);
   }
 }
 
@@ -45,16 +58,28 @@
   --text: #e3ebe8;
   --muted: #a7b4b0;
   --accent: #6cc5b8;
+  --accent-hover: #88d4c8;
+  --accent-soft: #1b3633;
   --border: #33403d;
+  --border-strong: #4b5a56;
   --field-border: #7d8b87;
+  --placeholder: #8f9c98;
   --focus: #6cc5b8;
   --on-accent: #141a19;
   --danger: #f2b8b5;
+  --danger-soft: #3a2422;
   --hover: #232d2b;
   --current: #1f3a36;
-  --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.3);
 }
 
+:root {
+  --radius: 0.5rem;
+  --radius-lg: 0.875rem;
+}
+
+/* Base. */
 *,
 *::before,
 *::after {
@@ -70,26 +95,38 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.page {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: 1.5rem max(1rem, env(safe-area-inset-right)) 1.5rem max(1rem, env(safe-area-inset-left));
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
   margin: 0 0 0.75rem;
   font-size: 1.75rem;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 1.1875rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 650;
 }
 
 p {
   color: var(--muted);
 }
 
-a {
+/* Zero specificity, so links styled as buttons keep their own colour. */
+:where(a) {
   color: var(--accent);
+  text-underline-offset: 0.2em;
 }
 
 :focus-visible {
@@ -97,52 +134,251 @@ a {
   outline-offset: 2px;
 }
 
-/* Top bar: menu on the left, who is logged in and logout on the right. */
-.topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-  /* viewport-fit=cover: in the installed app the page runs under the status bar. */
-  padding: calc(0.5rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0.5rem max(1rem, env(safe-area-inset-left));
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
 }
 
-.menu,
-.who {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1rem;
+code {
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
 }
 
-.menu a {
-  padding: 0.25rem 0;
-  text-decoration: none;
+[hidden] {
+  display: none !important;
 }
 
-.menu a[aria-current="page"] {
-  text-decoration: underline;
-  text-underline-offset: 0.3em;
+/* Hidden from view, still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .muted {
   color: var(--muted);
 }
 
+.hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.lead {
+  margin: -0.25rem 0 1.5rem;
+  font-size: 1.0625rem;
+}
+
+/* Icons (ui.js): strokes in the text colour. */
+.icon {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-grip {
+  stroke-width: 2.8;
+}
+
+/* Skip link: first stop for the keyboard, visible only when focused. */
+.skip-link {
+  position: absolute;
+  top: -4rem;
+  left: 0.5rem;
+  z-index: 10;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: calc(0.5rem + env(safe-area-inset-top));
+}
+
+/* Top bar: brand and menu on the left; theme, who and logout on the right. */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  /* viewport-fit=cover: in the installed app the page runs under the status bar. */
+  padding: calc(0.4rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0.4rem max(1rem, env(safe-area-inset-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.65rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.menu a[aria-current="page"] {
+  font-weight: 600;
+  color: var(--text);
+  background: var(--current);
+}
+
+.menu a.brand {
+  gap: 0.55rem;
+  margin-right: 0.5rem;
+  padding-left: 0.15rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text);
+  background: none;
+}
+
+.brand img {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.85rem;
+  margin-left: auto;
+}
+
+.who .me {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.theme-pick select {
+  padding: 0.3rem 0.45rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 47.99rem) {
+  .who .me {
+    display: none; /* the Account page shows who you are */
+  }
+}
+
+@media (max-width: 29.99rem) {
+  /* The icon stays; the name is still read out. */
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .menu a.brand {
+    margin-right: 0.25rem;
+  }
+}
+
+/* Server-rendered pages (account, admin, login…). */
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem max(1rem, env(safe-area-inset-right)) 3rem max(1rem, env(safe-area-inset-left));
+}
+
+.page-auth {
+  max-width: 26rem;
+  padding-top: max(2.5rem, 10vh);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0 0 1.5rem;
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.auth-brand img {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.page-auth h1 {
+  font-size: 1.375rem;
+}
+
+.page-auth .stack {
+  max-width: none;
+}
+
+.auth-alt {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+/* A white block that groups one subject. */
+.panel {
+  margin: 0 0 1rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel > h1:first-child,
+.panel > h2:first-child {
+  margin-top: 0;
+}
+
+.panel > :last-child {
+  margin-bottom: 0;
+}
+
 /* Forms: one column, label above its field. */
+form {
+  margin: 0;
+}
+
 .stack {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.35rem;
-  max-width: 24rem;
+  max-width: 26rem;
 }
 
 .stack label {
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.9375rem;
   font-weight: 600;
 }
 
@@ -150,74 +386,59 @@ a {
   margin-top: 1rem;
 }
 
-input {
-  width: 100%;
-  padding: 0.55rem 0.65rem;
+.stack button.wide {
+  align-self: stretch;
+}
+
+input,
+textarea,
+select {
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--field-border);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
 }
 
-.hint {
+input,
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+}
+
+select {
+  max-width: 100%;
+  padding: 0.5rem 0.6rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
   margin: 0;
-  font-size: 0.875rem;
+  accent-color: var(--accent);
 }
 
-button {
-  padding: 0.55rem 1rem;
-  font: inherit;
-  font-weight: 600;
-  color: var(--on-accent);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 0.4rem;
-  cursor: pointer;
-}
-
-button.secondary {
-  color: var(--accent);
-  background: var(--surface);
-}
-
-button.danger {
-  color: var(--danger);
-  background: var(--surface);
-  border-color: var(--danger);
-}
-
-/* A button that looks like a link (logout in the top bar). */
-button.link {
-  padding: 0.25rem 0;
-  font-weight: inherit;
-  color: var(--accent);
-  background: none;
-  border: none;
-  text-decoration: underline;
-}
-
-form {
-  margin: 0;
-}
-
-.error,
-.notice {
-  padding: 0.6rem 0.8rem;
-  color: var(--text);
-  background: var(--surface);
+fieldset {
+  align-self: stretch;
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.85rem 0.85rem;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--danger);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
 }
 
-.notice {
-  border-left-color: var(--accent);
+legend {
+  padding: 0 0.25rem;
+  font-weight: 600;
 }
 
-h2 {
-  margin: 2rem 0 0.5rem;
-  font-size: 1.25rem;
+/* A checkbox or radio with its text on one line. */
+.stack label.choice,
+label.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.35rem 0 0;
+  font-weight: 400;
 }
 
 /* A line of controls that wraps on narrow screens. */
@@ -234,119 +455,229 @@ h2 {
   max-width: 16rem;
 }
 
-/* Admin: one card per user. */
-.users {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.users li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-}
-
-.users .user {
-  margin: 0;
-  color: var(--text);
-}
-
-.badge {
-  padding: 0.05rem 0.45rem;
-  font-size: 0.8rem;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 1rem;
-}
-
-/* Hidden from view, still read by screen readers. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-[hidden] {
-  display: none !important;
-}
-
-select {
-  max-width: 100%;
-  padding: 0.5rem 0.6rem;
-  font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--field-border);
-  border-radius: 0.4rem;
-}
-
-input[type="checkbox"],
-input[type="radio"] {
-  width: auto;
-  margin: 0;
-  accent-color: var(--accent);
-}
-
-fieldset {
-  margin: 0.75rem 0 0;
-  padding: 0.5rem 0.75rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  align-self: stretch;
-}
-
-legend {
-  padding: 0 0.25rem;
-  font-weight: 600;
-}
-
-/* A checkbox or radio with its text on one line. */
-.stack label.choice,
-label.choice {
-  display: flex;
+/* Buttons. A plain <button> is the main action; .button-link is a link that
+   looks like a secondary button (.primary: like the main one). :where()
+   keeps these at zero specificity, so components can restyle buttons. */
+:where(button, .button-link) {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0.35rem 0 0;
-  font-weight: 400;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--on-accent);
+  text-decoration: none;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
-button.small {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.875rem;
+:where(button, .button-link) .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke-width: 2.2;
+}
+
+:where(.button-link, button.secondary) {
+  color: var(--accent);
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+:where(.button-link.primary) {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+:where(button.quiet, .button-link.quiet) {
+  color: var(--accent);
+  background: transparent;
+  border-color: transparent;
+}
+
+:where(button.danger) {
+  color: var(--danger);
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+:where(button.quiet.danger) {
+  background: transparent;
+  border-color: transparent;
 }
 
 /* A toggle that is on, like Ordenen while ordering. */
-button.secondary[aria-pressed="true"] {
+:where(button.secondary[aria-pressed="true"]) {
   color: var(--on-accent);
   background: var(--accent);
+  border-color: var(--accent);
 }
 
-#sidebar-title:focus {
-  outline: none;
+:where(button.small, .button-link.small) {
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.875rem;
 }
 
-button:disabled {
+/* A button that looks like a link (logout in the top bar). */
+:where(button.link) {
+  min-height: 0;
+  padding: 0.25rem 0;
+  font-weight: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
+
+:where(button:disabled) {
   cursor: default;
   opacity: 0.5;
 }
 
-.theme-pick select {
-  padding: 0.25rem 0.4rem;
-  font-size: 0.875rem;
+:where(button:active:not(:disabled), .button-link:active) {
+  transform: translateY(1px);
+}
+
+@media (hover: hover) {
+  :where(button:hover:not(:disabled), .button-link.primary:hover) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  :where(button.secondary:hover:not(:disabled), .button-link:not(.primary):hover, button.quiet:hover:not(:disabled)) {
+    color: var(--accent);
+    background: var(--hover);
+    border-color: var(--border-strong);
+  }
+
+  :where(button.quiet:hover:not(:disabled), .button-link.quiet:hover) {
+    border-color: transparent;
+  }
+
+  :where(button.secondary[aria-pressed="true"]:hover) {
+    color: var(--on-accent);
+    background: var(--accent-hover);
+  }
+
+  :where(button.danger:hover:not(:disabled)) {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: var(--danger);
+  }
+
+  :where(button.quiet.danger:hover:not(:disabled)) {
+    border-color: transparent;
+  }
+
+  :where(button.link:hover) {
+    background: none;
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* A square button with only an icon (read aloud, edit, delete). */
+.icon-button {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.icon-button .icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 1.8;
+}
+
+@media (hover: hover) {
+  .icon-button:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--hover);
+    border-color: transparent;
+  }
+
+  .icon-button.danger:hover:not(:disabled) {
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+}
+
+/* Touch screens: every target at least 44px (Apple's guideline). */
+@media (pointer: coarse) {
+  :where(button, .button-link),
+  :where(button.small, .button-link.small),
+  .menu a {
+    min-height: 2.75rem;
+  }
+
+  :where(button.link) {
+    min-height: 2.75rem;
+  }
+
+  .icon-button,
+  .card-text .icon-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Smaller than 16px and Safari on iOS zooms in on the field. */
+  .theme-pick select {
+    font-size: 1rem;
+  }
+}
+
+/* Messages. */
+.error,
+.notice,
+.status {
+  padding: 0.65rem 0.85rem;
+  color: var(--text);
+  background: var(--danger-soft);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+.notice,
+.status {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.status.is-error {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* Offline: read-only. offline.js shows the banner and sets data-offline;
+   everything that needs the server is marked data-online. */
+.offline-banner {
+  margin: 0;
+  padding: 0.45rem max(1rem, env(safe-area-inset-right)) 0.45rem max(1rem, env(safe-area-inset-left));
+  font-size: 0.9375rem;
+  color: var(--text);
+  text-align: center;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-offline] [data-online] {
+  display: none !important;
 }
 
 /* The app: one column on phones; sidebar with the tree next to the page on
@@ -354,44 +685,20 @@ button:disabled {
    the page of a heading or list. */
 .app {
   display: grid;
-  gap: 1rem 2rem;
+  gap: 1rem 2.5rem;
   align-items: start;
-  padding: 1rem max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left));
-}
-
-.status {
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 0.6rem 0.8rem;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: 0.4rem;
-}
-
-.status.is-error {
-  border-left-color: var(--danger);
-}
-
-/* Offline: read-only. offline.js shows the banner and sets data-offline;
-   everything that needs the server is marked data-online. */
-.offline-banner {
-  margin: 0;
-  padding: 0.4rem max(1rem, env(safe-area-inset-right)) 0.4rem max(1rem, env(safe-area-inset-left));
-  color: var(--text);
-  background: var(--current);
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  font-size: 0.95rem;
-}
-
-html[data-offline] [data-online] {
-  display: none !important;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) 3rem max(1rem, env(safe-area-inset-left));
 }
 
 .sidebar {
   min-width: 0;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .sidebar-head {
@@ -399,21 +706,36 @@ html[data-offline] [data-online] {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem;
+  padding-left: 0.4rem;
 }
 
 .sidebar-head h2 {
   margin: 0;
+  font-size: 1.375rem;
+}
+
+#sidebar-title:focus {
+  outline: none;
+}
+
+.sidebar > .hint {
+  padding: 0 0.4rem 0.5rem;
+}
+
+.add-top {
+  width: 100%;
+  justify-content: flex-start;
+  padding-left: 0.5rem;
 }
 
 .main {
   min-width: 0;
-  max-width: 44rem;
+  max-width: 46rem;
 }
 
-.back-link {
-  display: inline-block;
-  margin-bottom: 0.75rem;
+.main h1:focus {
+  outline: none;
 }
 
 @media (max-width: 47.99rem) {
@@ -425,26 +747,30 @@ html[data-offline] [data-online] {
 
 @media (min-width: 48rem) {
   .app {
-    grid-template-columns: 18rem minmax(0, 1fr);
+    grid-template-columns: 19rem minmax(0, 1fr);
+    padding-top: 1.5rem;
   }
 
   .sidebar {
     position: sticky;
-    top: 0;
-    max-height: 100vh;
-    padding: 0.25rem 0.5rem 1rem 0;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
-  .back-link {
-    display: none;
+  .sidebar-head h2 {
+    font-size: 0.8125rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
 }
 
 /* The tree of headings and lists. */
 .tree {
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
 }
 
 .tree-list {
@@ -454,7 +780,7 @@ html[data-offline] [data-online] {
 }
 
 .tree-list .tree-list {
-  margin-left: 1.1rem;
+  margin-left: 0.85rem;
   padding-left: 0.4rem;
   border-left: 1px solid var(--border);
 }
@@ -462,56 +788,103 @@ html[data-offline] [data-online] {
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
   min-height: 2.25rem;
-  border-radius: 0.4rem;
-}
-
-.tree-row:hover {
-  background: var(--hover);
+  border-radius: var(--radius);
 }
 
 .tree-row.is-current {
   background: var(--current);
 }
 
-.tree-toggle,
-.tree-icon {
+@media (hover: hover) {
+  .tree-row:not(.is-current):hover {
+    background: var(--hover);
+  }
+}
+
+.tree-toggle {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.1rem;
-  min-width: 2.75rem;
-  min-height: 2.25rem;
-  padding: 0 0.2rem;
-  font-weight: 400;
+  width: 1.75rem;
+  height: 2.25rem;
+  min-height: 0;
+  padding: 0;
   color: var(--muted);
   background: none;
   border: none;
+  border-radius: var(--radius);
+}
+
+button.tree-toggle:hover {
+  color: var(--text);
+  background: none;
+}
+
+.tree-toggle .icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.2;
+  transition: transform 0.15s ease;
+}
+
+.tree-toggle[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
 }
 
 .tree-link {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.4rem 0.25rem;
-  overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.45rem 0.4rem 0.1rem;
   color: var(--text);
   text-decoration: none;
+  border-radius: var(--radius);
 }
 
-.tree-link:hover {
-  text-decoration: underline;
+.tree-link .icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--muted);
+}
+
+.tree-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .tree-row.is-current .tree-link {
   font-weight: 600;
 }
 
+.tree-row.is-current .tree-link .icon {
+  color: var(--accent);
+}
+
 .tree-empty {
+  margin: 0.25rem 0;
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+/* Number of due questions (tree, heading page). */
+.count {
+  flex: none;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Ordering mode: drag handle and up/down buttons per row. */
@@ -520,13 +893,18 @@ html[data-offline] [data-online] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
+  width: 1.5rem;
   min-height: 2.25rem;
   color: var(--muted);
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.drag-handle .icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .order-buttons {
@@ -536,18 +914,32 @@ html[data-offline] [data-online] {
 }
 
 .order-buttons button {
-  min-width: 2.25rem;
-  padding: 0.2rem 0.4rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.3rem;
   font-weight: 400;
   color: var(--accent);
   background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+@media (pointer: coarse) {
+  .order-buttons button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+/* While ordering, the names get the room of the icons. */
+.tree.is-ordering .tree-link .icon {
+  display: none;
 }
 
 .tree-item.is-dragging {
   position: relative;
   z-index: 1;
   background: var(--surface);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   cursor: grabbing;
 }
@@ -566,12 +958,19 @@ body.is-dragging {
   cursor: grabbing;
 }
 
-/* Page of a heading or list. */
-.crumbs {
+/* Top of a heading or list page. */
+.back-link {
+  display: inline-flex;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.crumbs ol {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
   padding: 0;
   font-size: 0.875rem;
   list-style: none;
@@ -583,78 +982,466 @@ body.is-dragging {
   color: var(--muted);
 }
 
-.main h1 {
+.crumbs a {
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumbs [aria-current] {
+  color: var(--muted);
+}
+
+@media (max-width: 47.99rem) {
+  .crumbs {
+    display: none;
+  }
+
+  /* Under the title: the text lines up with it, not the button's edge. */
+  .page-tools {
+    margin-left: -1rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .back-link {
+    display: none;
+  }
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.page-head h1 {
+  flex: 1 1 14rem;
+  min-width: 0;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-.main h1:focus {
+.page-tools {
+  display: flex;
+  gap: 0.15rem;
+  margin-right: -0.5rem;
+}
+
+.list-meta {
+  margin: -0.25rem 0 1.25rem;
+  font-size: 0.9375rem;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+.section-head .row {
+  gap: 0.35rem;
+}
+
+.h2-count {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Practice block: how much is due, and the way in. */
+.practice-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 0 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.due-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.due-number {
+  font-size: 2.25rem;
+  font-weight: 750;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.due-label {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.due-summary.is-done {
+  align-items: center;
+  color: var(--accent);
+}
+
+.due-summary.is-done .icon {
+  width: 1.6rem;
+  height: 1.6rem;
+  stroke-width: 2.2;
+}
+
+/* Contents of a heading. */
+.contents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.contents li + li {
+  border-top: 1px solid var(--border);
+}
+
+.contents a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.contents a:focus-visible {
+  outline-offset: -3px;
+  border-radius: var(--radius-lg);
+}
+
+.contents a > .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--muted);
+}
+
+.contents a > .icon-chevron {
+  width: 1rem;
+  height: 1rem;
+}
+
+.contents-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) {
+  .contents a:hover {
+    background: var(--hover);
+  }
+}
+
+/* Overview (desktop): one tile per top-level heading. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.125rem;
+  font-weight: 650;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.tile-link .icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--accent);
+}
+
+/* The whole tile is the link; the Oefenen button lies on top of it. */
+.tile-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.tile-link:focus-visible {
   outline: none;
 }
 
-.actions {
-  margin: 0.5rem 0 1.5rem;
+.tile-link:focus-visible::after {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-lg);
 }
 
-.contents {
+.tile-meta {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.tile-foot .button-link {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+}
+
+.tile-due {
+  color: var(--muted);
+}
+
+.tile-due strong {
+  font-size: 1.25rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-due.is-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+}
+
+.tile-due .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke-width: 2.2;
+}
+
+@media (hover: hover) {
+  .tile:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow);
+  }
+}
+
+/* Empty states. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.empty > .icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+  stroke-width: 1.5;
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.empty p {
+  max-width: 28rem;
+  margin: 0;
+}
+
+.empty > button,
+.empty .row {
+  margin-top: 1rem;
+  justify-content: center;
+}
+
+.empty-note {
+  color: var(--muted);
+}
+
+/* Cards of a list: the two sides next to each other where there's room. */
+.cards {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
+  container-type: inline-size;
 }
 
-.contents a {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.8rem;
-  overflow-wrap: anywhere;
-  color: var(--text);
-  text-decoration: none;
+.card-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "one tools"
+    "two tools"
+    "note note";
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 0.6rem 0.75rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
 }
 
-.contents a:hover {
-  border-color: var(--accent);
+@container (min-width: 32rem) {
+  .card-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "one two tools"
+      "note note note";
+  }
 }
 
-.settings {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0;
+.side-1 {
+  grid-area: one;
 }
 
-.settings dt {
+.side-2 {
+  grid-area: two;
+}
+
+.card-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.card-label {
+  font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.settings dd {
+.card-text {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2rem;
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+
+.card-text > span {
+  min-width: 0;
+}
+
+.card-text .icon-button {
+  width: 2rem;
+  height: 2rem;
+}
+
+.card-row .card-note {
+  grid-area: note;
   margin: 0;
-  color: var(--muted);
+  padding-top: 0.5rem;
+  font-size: 0.875rem;
+  border-top: 1px dashed var(--border);
+}
+
+.card-actions {
+  grid-area: tools;
+  align-self: start;
+  display: flex;
+  gap: 0.1rem;
 }
 
 /* Dialogs (forms and delete confirmation). */
 dialog {
   width: min(32rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
-  padding: 1.25rem;
+  padding: 1.5rem;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.25);
+}
+
+dialog[open] {
+  animation: dialog-in 0.18s ease-out;
 }
 
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(10 16 15 / 0.5);
+}
+
+dialog[open]::backdrop {
+  animation: fade-in 0.18s ease-out;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 dialog h2 {
-  margin: 0;
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
 }
 
 dialog .stack {
@@ -667,11 +1454,70 @@ dialog .stack > select {
 }
 
 .dialog-buttons {
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 }
 
 .stack .dialog-buttons button {
   margin-top: 0;
+}
+
+/* Practice: one column as wide as the card. */
+.practice-head {
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.15rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.practice-head h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.practice-head h1:focus {
+  outline: none;
+}
+
+.practice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 30rem;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.practice-progress {
+  margin: 0;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-bar {
+  display: block;
+  height: 0.375rem;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(var(--done, 0));
+  transform-origin: left;
 }
 
 /* Flash card: two faces, flipped in 3D. A face's visibility switches halfway
@@ -679,15 +1525,14 @@ dialog .stack > select {
 .flipcard {
   display: block;
   width: 100%;
-  max-width: 26rem;
   aspect-ratio: 3 / 2;
   padding: 0;
   font-weight: 400;
   color: var(--text);
   background: none;
   border: none;
-  border-radius: 0.75rem;
-  perspective: 60rem;
+  border-radius: var(--radius-lg);
+  perspective: 70rem;
 }
 
 .flipcard-inner {
@@ -710,13 +1555,12 @@ dialog .stack > select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  padding: 2.5rem 1.5rem 1.5rem;
   overflow-wrap: anywhere;
   text-align: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
@@ -736,203 +1580,184 @@ dialog .stack > select {
   visibility: visible;
 }
 
-.flipcard-text {
-  font-size: 1.5rem;
-  line-height: 1.3;
+/* The verdict as a coloured edge on top of the answer. */
+.flipcard.is-right .flipcard-back {
+  box-shadow: inset 0 4px 0 var(--accent), var(--shadow);
+}
+
+.flipcard.is-wrong .flipcard-back {
+  box-shadow: inset 0 4px 0 var(--danger), var(--shadow);
 }
 
 .flipcard-side {
-  font-size: 0.8rem;
+  position: absolute;
+  top: 0.9rem;
+  left: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .flipcard-inner,
-  .flipcard-face {
-    transition: none;
-  }
-}
-
-/* A link that looks like a secondary button (downloads). */
-a.button-link {
-  display: inline-block;
-  padding: 0.55rem 1rem;
+.flipcard-text {
+  font-size: 1.875rem;
   font-weight: 600;
-  color: var(--accent);
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  border-radius: 0.4rem;
-  text-decoration: none;
+  line-height: 1.25;
 }
 
-a.button-link:hover {
-  background: var(--hover);
+.flipcard-text.is-long {
+  font-size: 1.3125rem;
 }
 
-/* The main link of a row, like a primary button (Oefenen). */
-a.button-link.primary {
-  color: var(--on-accent);
-  background: var(--accent);
-}
-
-a.button-link.primary:hover {
-  filter: brightness(1.08);
-}
-
-/* Practice: one column as wide as the card. */
-.practice {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-width: 26rem;
-}
-
-.practice h2 {
-  margin-top: 0.5rem;
-}
-
-.practice h2:focus {
-  outline: none;
-}
-
-.practice-progress {
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-.practice-speak {
-  min-height: 1.75rem;
+.flipcard-action {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
 }
 
 .practice-form {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .practice-form label {
   font-weight: 600;
 }
 
+.practice-form .row {
+  flex-wrap: nowrap;
+}
+
 .practice-form .row input {
-  flex: 1 1 10rem;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: none;
-  font-size: 1.1rem; /* at least 16px, so iOS doesn't zoom in */
+  min-height: 2.75rem;
+  font-size: 1.125rem; /* at least 16px, so iOS doesn't zoom in */
+}
+
+.practice-form .row button {
+  flex: none;
+  min-height: 2.75rem;
 }
 
 .practice-form input[readonly] {
   color: var(--muted);
+  background: var(--bg);
+}
+
+.key-hint {
+  margin-top: -0.4rem;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .key-hint {
+    display: none; /* no Enter key on a phone */
+  }
 }
 
 .feedback {
-  min-height: 1.5rem;
   margin: 0;
   overflow-wrap: anywhere;
 }
 
 .feedback.is-right,
 .feedback.is-wrong {
-  padding: 0.6rem 0.8rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: 0.4rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--accent-soft);
+  border-radius: var(--radius);
 }
 
 .feedback.is-wrong {
-  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.feedback .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.1rem;
+  color: var(--accent);
+  stroke-width: 2.4;
+}
+
+.feedback.is-wrong .icon {
+  color: var(--danger);
 }
 
 .practice .card-note {
   margin: 0;
+  font-size: 0.9375rem;
 }
 
-.practice .actions {
-  margin: 0.25rem 0 0;
+.practice-actions .stop {
+  margin-left: auto;
 }
 
-textarea {
-  width: 100%;
-  padding: 0.55rem 0.65rem;
-  font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--field-border);
-  border-radius: 0.4rem;
-}
-
-code {
-  font-size: 0.9em;
-  overflow-wrap: anywhere;
-}
-
-/* Cards of a list: one row per card, sides side by side on wide screens. */
-.cards {
+/* End of a session, nothing to do, or an error. */
+.practice-message {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem 1rem;
-  padding: 0.75rem 1rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.card-side {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
+.practice-message > .icon {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.35rem;
+  padding: 0.6rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  stroke-width: 2.2;
 }
 
-.card-label {
-  flex: none;
-  width: 3.25rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.card-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.card-note,
-.card-actions {
-  grid-column: 1 / -1;
+.practice-message h2 {
   margin: 0;
 }
 
-.card-note {
-  font-size: 0.875rem;
-  color: var(--muted);
+.practice-message h2:focus {
+  outline: none;
 }
 
-button.icon {
-  flex: none;
-  padding: 0.2rem 0.45rem;
-  font-size: 0.95rem;
-  line-height: 1;
+.practice-message p {
+  margin: 0;
 }
 
-@media (min-width: 48rem) {
-  .card-row {
-    grid-template-columns: 1fr 1fr;
-  }
+.result-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: 750;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.practice-message .row {
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+textarea {
+  resize: vertical;
 }
 
 /* The Meldingen tab. */
 .device-status {
   margin: 0 0 0.25rem;
+  color: var(--text);
 }
 
 .devices {
@@ -950,11 +1775,11 @@ button.icon {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem 1rem;
-  padding: 0.6rem 0.8rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.85rem;
   overflow-wrap: anywhere;
-  background: var(--surface);
+  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
 }
 
 .devices li.muted {
@@ -963,7 +1788,13 @@ button.icon {
   border: none;
 }
 
+.panel .actions {
+  margin: 0.75rem 0 0;
+}
+
 .stack .quiet-times {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
   margin-top: 0.25rem;
 }
 
@@ -972,7 +1803,9 @@ button.icon {
 }
 
 .quiet-times input {
-  flex: 0 1 8rem;
+  flex: 0 1 auto;
+  width: 6.75rem;
+  min-width: 0;
 }
 
 .notify-tree {
@@ -993,4 +1826,55 @@ button.icon {
   margin: 0;
   padding: 0.35rem 0;
   overflow-wrap: anywhere;
+}
+
+.notify-list .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--muted);
+}
+
+/* Admin: one card per user. */
+.users {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.users li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.users .user {
+  margin: 0;
+  color: var(--text);
+}
+
+.badge {
+  padding: 0.05rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+/* Reduced motion: no flip, no fades. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

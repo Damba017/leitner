@@ -4,7 +4,7 @@
 // only says so.
 
 import { api } from "./api.js";
-import { el } from "./ui.js";
+import { el, icon } from "./ui.js";
 import { ROOT } from "./state.js";
 import { isOffline } from "./offline.js";
 import * as push from "./push.js";
@@ -185,7 +185,7 @@ export function startNotify(view, getLib) {
                   "label",
                   { class: "choice" },
                   box,
-                  el("span", { "aria-hidden": "true", text: isHeading ? "📂" : "📄" }),
+                  icon(isHeading ? "folder" : "cards"),
                   el("span", { text: lib.name(item) }),
                   silenced ? el("span", { class: "muted", text: " (uit via kop)" }) : null,
                 ),
@@ -331,20 +331,27 @@ export function startNotify(view, getLib) {
     fillForm();
     renderTree();
     body.replaceChildren(
-      el("h2", { text: "Dit apparaat" }),
-      status,
-      hint,
-      el("div", { class: "row actions" }, toggle, test),
-      error,
-      notice,
-      el("h2", { text: "Je apparaten" }),
-      devices,
-      el("h2", { text: "Wanneer" }),
-      form,
-      el("h2", { text: "Van welke koppen en lijsten" }),
-      el("p", { class: "hint", text: "Zet een kop of lijst uit om er geen meldingen van te krijgen. Een kop die uit staat, zet alles erin uit." }),
-      treeError,
-      tree,
+      el(
+        "section",
+        { class: "panel" },
+        el("h2", { text: "Dit apparaat" }),
+        status,
+        hint,
+        el("div", { class: "row actions" }, toggle, test),
+        error,
+        notice,
+        el("h3", { text: "Je apparaten" }),
+        devices,
+      ),
+      el("section", { class: "panel" }, el("h2", { text: "Wanneer" }), form),
+      el(
+        "section",
+        { class: "panel" },
+        el("h2", { text: "Van welke koppen en lijsten" }),
+        el("p", { class: "hint", text: "Zet een kop of lijst uit om er geen meldingen van te krijgen. Een kop die uit staat, zet alles erin uit." }),
+        treeError,
+        tree,
+      ),
     );
   }
 

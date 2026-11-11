@@ -16,11 +16,20 @@
     }
   }
 
+  // The browser's bar colour per theme: the top bar's (--surface in app.css).
+  const barColors = { light: "#ffffff", dark: "#1d2523" };
+
   function apply(theme) {
     if (theme) {
       document.documentElement.dataset.theme = theme;
     } else {
       delete document.documentElement.dataset.theme;
+    }
+    // The <meta name="theme-color"> tags follow the system; a chosen theme
+    // overrides both.
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+      const system = meta.media.includes("dark") ? "dark" : "light";
+      meta.content = barColors[theme || system];
     }
   }
 

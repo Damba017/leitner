@@ -1,7 +1,8 @@
-// The sidebar tree: headings (collapsible) and lists in the user's order.
-// In ordering mode every row gets a drag handle and up/down buttons.
+// The sidebar tree: headings (collapsible) and lists in the user's order,
+// each with the number of due questions in it. In ordering mode every row
+// gets a drag handle and up/down buttons.
 
-import { el } from "./ui.js";
+import { el, icon } from "./ui.js";
 import { ROOT, itemKey } from "./state.js";
 
 const openKey = "leitner.open";
@@ -24,10 +25,16 @@ export function saveOpen(open) {
   }
 }
 
+// dueBadge shows n due questions; nothing when there are none or it's unknown.
+export function dueBadge(n) {
+  return n ? el("span", { class: "count" }, String(n), el("span", { class: "visually-hidden", text: " te doen" })) : null;
+}
+
 // renderTree draws lib into root. current is the open page ({kind, id} or
-// null); open is the set of expanded heading ids. onToggle(id) folds a
-// heading; onMove(parent, key, step) moves an item up (-1) or down (+1).
-export function renderTree(root, lib, { current, open, ordering, onToggle, onMove }) {
+// null); open is the set of expanded heading ids; due(kind, id) the number
+// of due questions (null if unknown). onToggle(id) folds a heading;
+// onMove(parent, key, step) moves an item up (-1) or down (+1).
+export function renderTree(root, lib, { current, open, ordering, due, onToggle, onMove }) {
   const isCurrent = (item) => current && current.kind === item.kind && current.id === item.id;
 
   const level = (parent) => {
@@ -36,33 +43,34 @@ export function renderTree(root, lib, { current, open, ordering, onToggle, onMov
     items.forEach((item, i) => {
       const name = lib.name(item);
       const here = isCurrent(item);
+      const isHeading = item.kind === "heading";
+      const isOpen = isHeading && open.has(item.id);
       const row = el("div", { class: here ? "tree-row is-current" : "tree-row" });
       if (ordering) {
-        row.append(el("span", { class: "drag-handle", "aria-hidden": "true", title: "Slepen", text: "⠿" }));
+        row.append(el("span", { class: "drag-handle", "aria-hidden": "true", title: "Slepen" }, icon("grip")));
       }
-      const li = el("li", { class: "tree-item", "data-key": itemKey(item) }, row);
-      if (item.kind === "heading") {
-        const isOpen = open.has(item.id);
-        row.append(
-          el("button", {
-            type: "button",
-            class: "tree-toggle",
-            "aria-expanded": String(isOpen),
-            "aria-label": `Inhoud van ${name}`,
-            onclick: () => onToggle(item.id),
-            text: isOpen ? "▾ 📂" : "▸ 📁",
-          }),
-          el("a", { class: "tree-link", href: `#/kop/${item.id}`, "aria-current": here && "page", text: name }),
-        );
-        if (isOpen) {
-          li.append(lib.children(item.id).length ? level(item.id) : el("p", { class: "tree-empty", text: "Leeg" }));
-        }
-      } else {
-        row.append(
-          el("span", { class: "tree-icon", "aria-hidden": "true", text: "📄" }),
-          el("a", { class: "tree-link", href: `#/lijst/${item.id}`, "aria-current": here && "page", text: name }),
-        );
-      }
+      row.append(
+        isHeading
+          ? el(
+              "button",
+              {
+                type: "button",
+                class: "tree-toggle",
+                "aria-expanded": String(isOpen),
+                "aria-label": `Inhoud van ${name}`,
+                onclick: () => onToggle(item.id),
+              },
+              icon("chevron"),
+            )
+          : el("span", { class: "tree-toggle", "aria-hidden": "true" }),
+        el(
+          "a",
+          { class: "tree-link", href: isHeading ? `#/kop/${item.id}` : `#/lijst/${item.id}`, "aria-current": here && "page" },
+          icon(isHeading ? "folder" : "cards"),
+          el("span", { class: "tree-name", text: name }),
+          ordering ? null : dueBadge(due(item.kind, item.id)),
+        ),
+      );
       if (ordering) {
         row.append(
           el(
@@ -87,11 +95,16 @@ export function renderTree(root, lib, { current, open, ordering, onToggle, onMov
           ),
         );
       }
+      const li = el("li", { class: "tree-item", "data-key": itemKey(item) }, row);
+      if (isOpen) {
+        li.append(lib.children(item.id).length ? level(item.id) : el("p", { class: "tree-empty", text: "Leeg" }));
+      }
       ul.append(li);
     });
     return ul;
   };
 
+  root.classList.toggle("is-ordering", ordering);
   if (lib.children(ROOT).length === 0) {
     root.replaceChildren(el("p", { class: "tree-empty", text: "Nog geen koppen. Maak er een met + Nieuwe kop." }));
   } else {

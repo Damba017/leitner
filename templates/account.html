@@ -1,9 +1,10 @@
 {{define "title"}}Account · Leitner{{end}}
 {{define "content"}}
 <h1>Account</h1>
-<p>{{.Me.Username}} · {{.Me.Email}}</p>
+<p class="lead">{{.Me.Username}} · {{.Me.Email}}</p>
 {{template "messages" .}}
 
+<section class="panel">
 <h2>Wachtwoord wijzigen</h2>
 <form method="post" action="/account/password" class="stack">
   <input type="text" name="username" value="{{.Me.Username}}" autocomplete="username" hidden>
@@ -16,10 +17,19 @@
   <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="6" required>
   <button>Wachtwoord wijzigen</button>
 </form>
+</section>
 
+<section class="panel">
+<h2>Back-up</h2>
+<p>Al je koppen, lijsten en kaarten, met je voortgang, in één JSON-bestand.</p>
+<p><a class="button-link" href="/api/export.json" download>Alles downloaden (JSON)</a></p>
+</section>
+
+<section class="panel">
 <h2>Overal uitloggen</h2>
 <p>Log uit op al je apparaten, ook dit.</p>
 <form method="post" action="/logout-all">
   <button class="secondary">Overal uitloggen</button>
 </form>
+</section>
 {{end}}

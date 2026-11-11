@@ -8,16 +8,17 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141a19" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1d2523" media="(prefers-color-scheme: dark)">
 <script src="/pwa.js" defer></script>
 <script src="/theme.js"></script>
 <script type="module" src="/app.js"></script>
 </head>
 <body>
+<a class="skip-link" id="skip-link" href="#view">Naar de inhoud</a>
 <header class="topbar">
   <nav class="menu" aria-label="Hoofdmenu">
-    <a href="#/" aria-current="page">Leitner</a>
+    <a class="brand" href="#/" aria-current="page"><img src="/icon.svg" alt="" width="28" height="28"><span class="brand-name">Leitner</span></a>
     <a href="#/meldingen" data-online>Meldingen</a>
     <a href="/account" data-online>Account</a>
     <a href="/admin" id="admin-link" data-online hidden>Admin</a>
@@ -31,7 +32,7 @@
         <option value="dark">Thema: donker</option>
       </select>
     </label>
-    <span class="muted" id="me"></span>
+    <span class="me" id="me"></span>
     <form method="post" action="/logout" data-online><button class="link">Uitloggen</button></form>
   </div>
 </header>
@@ -45,9 +46,9 @@
       <h2 id="sidebar-title" tabindex="-1">Overzicht</h2>
       <button type="button" class="secondary small" id="order-toggle" aria-pressed="false" data-online>Ordenen</button>
     </div>
-    <p class="hint" id="order-hint" hidden>Sleep aan ⠿ of gebruik ↑ en ↓. Naar een andere kop verplaatsen gaat via Bewerken.</p>
+    <p class="hint" id="order-hint" hidden>Sleep aan de stippen of gebruik ↑ en ↓. Naar een andere kop verplaatsen gaat via Bewerken.</p>
     <div id="tree" class="tree"></div>
-    <button type="button" class="secondary" id="add-top" data-online>+ Nieuwe kop</button>
+    <button type="button" class="quiet add-top" id="add-top" data-online>+ Nieuwe kop</button>
   </aside>
 
   <main class="main" id="view"></main>

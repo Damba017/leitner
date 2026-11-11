@@ -13,7 +13,7 @@
 import { api } from "./api.js";
 import { isOffline, setOffline, saveSnapshot, loadSnapshot } from "./offline.js";
 import { practiceItems, dueCounts, cardItem } from "./due.js";
-import { showStatus } from "./ui.js";
+import { showStatus, focusKey, refocus } from "./ui.js";
 import { Library, ROOT, itemKey } from "./state.js";
 import { renderTree, loadOpen, saveOpen, focusMoveButton, focusToggle } from "./tree.js";
 import { renderHome, renderHeading, renderList, renderNotFound } from "./views.js";
@@ -201,15 +201,25 @@ function dueCount(kind, id) {
   return ids.reduce((n, listId) => n + (due.get(listId) ?? 0), 0);
 }
 
-// loadDue fetches the due counts and redraws, except during practice.
-// Online it then also refreshes the snapshot: it runs after every change.
-// Offline the counts come from the snapshot, at the current time.
+// showDue redraws with new due counts. A practice session or the Meldingen
+// tab draws itself; then only the tree is drawn again.
+function showDue() {
+  if (!session) {
+    render();
+    return;
+  }
+  const key = treeRoot.contains(document.activeElement) ? focusKey(document.activeElement) : null;
+  renderSidebar();
+  refocus(treeRoot, key);
+}
+
+// loadDue fetches the due counts and redraws (see showDue). Online it then
+// also refreshes the snapshot: it runs after every change. Offline the
+// counts come from the snapshot, at the current time.
 async function loadDue() {
   if (isOffline()) {
     due = snapshot ? dueCounts(snapshot, Date.now()) : null;
-    if (!session) {
-      render();
-    }
+    showDue();
     return;
   }
   try {
@@ -222,9 +232,7 @@ async function loadDue() {
     }
     due = null; // the buttons then show no number
   }
-  if (!session) {
-    render();
-  }
+  showDue();
   refreshSnapshot();
 }
 
@@ -242,7 +250,7 @@ function revealCurrent() {
 }
 
 function renderSidebar() {
-  renderTree(treeRoot, lib, { current: currentRoute(), open, ordering, onToggle: toggle, onMove: moveBy });
+  renderTree(treeRoot, lib, { current: currentRoute(), open, ordering, due: dueCount, onToggle: toggle, onMove: moveBy });
 }
 
 // markMenu marks the top-bar link of the page on screen.
@@ -257,8 +265,20 @@ function markMenu(notify) {
 }
 
 // render draws the sidebar and the page; focus moves to the page title, for
-// keyboard and screen reader users after navigating.
+// keyboard and screen reader users after navigating. A redraw of the same
+// page (new due counts, back from the background, after a dialog) keeps
+// focus on the same control.
 function render({ focus = false } = {}) {
+  const active = document.activeElement;
+  const key = focus ? null : focusKey(active);
+  const where = view.contains(active) ? view : treeRoot.contains(active) ? treeRoot : null;
+  draw(focus);
+  if (where) {
+    refocus(where, key);
+  }
+}
+
+function draw(focus) {
   const r = currentRoute();
   app.dataset.route = r ? (r.practice ? "practice" : r.kind) : "home";
   markMenu(r?.kind === "notify");
@@ -294,7 +314,7 @@ function render({ focus = false } = {}) {
     return;
   }
   if (r?.kind === "heading") {
-    renderHeading(view, lib, r.id, actions, dueCount("heading", r.id));
+    renderHeading(view, lib, r.id, actions, dueCount);
   } else if (r?.kind === "list") {
     if (shown.listId !== r.id) {
       shown = { listId: r.id, cards: null };
@@ -307,7 +327,7 @@ function render({ focus = false } = {}) {
       loadCards(r.id);
     }
   } else {
-    renderHome(view, lib, actions);
+    renderHome(view, lib, actions, dueCount);
   }
   if (focus) {
     (r ? view.querySelector("h1") : document.getElementById("sidebar-title"))?.focus({ preventScroll: true });
@@ -503,6 +523,12 @@ const actions = {
 
 setupDialogs();
 document.getElementById("add-top").addEventListener("click", () => actions.newHeading(null));
+// The skip link can't use its href: hashes are routes here.
+document.getElementById("skip-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  const target = getComputedStyle(view).display === "none" ? document.getElementById("sidebar-title") : view.querySelector("h1");
+  target?.focus();
+});
 orderToggle.addEventListener("click", () => setOrdering(!ordering));
 makeSortable(treeRoot, {
   itemSelector: ".tree-item",

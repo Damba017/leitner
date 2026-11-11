@@ -6,15 +6,18 @@
 import { el } from "./ui.js";
 
 // createCard returns {element, flip, flipped}. front and back are
-// {text, lang, label}: lang sets the language for screen readers and
-// speech, label is the small line under the text (e.g. "Spaans").
+// {text, lang, label, action}: lang sets the language for screen readers
+// and speech, label is the small line under the text (e.g. "Spaans"),
+// action an optional button in the face's corner (not on an interactive
+// card: no button inside a button).
 export function createCard({ front, back, interactive = true }) {
   const face = (side, cls) =>
     el(
       "span",
       { class: `flipcard-face ${cls}` },
-      el("span", { class: "flipcard-text", lang: side.lang || null, text: side.text }),
       side.label ? el("span", { class: "flipcard-side", text: side.label }) : null,
+      el("span", { class: side.text.length > 40 ? "flipcard-text is-long" : "flipcard-text", lang: side.lang || null, text: side.text }),
+      interactive ? null : side.action,
     );
 
   const element = el(

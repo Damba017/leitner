@@ -1,5 +1,6 @@
 {{define "title"}}Account aanmaken · Leitner{{end}}
 {{define "content"}}
+<div class="panel">
 <h1>Account aanmaken</h1>
 {{template "messages" .}}
 <form method="post" action="/register" class="stack">
@@ -14,7 +15,8 @@
   <p id="password-hint" class="hint">Minstens 6 tekens.</p>
   <label for="password2">Herhaal wachtwoord</label>
   <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="6" required>
-  <button>Account aanmaken</button>
+  <button class="wide">Account aanmaken</button>
 </form>
-<p>Al een account? <a href="/login">Inloggen</a></p>
+</div>
+<p class="auth-alt">Al een account? <a href="/login">Inloggen</a></p>
 {{end}}

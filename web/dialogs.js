@@ -1,7 +1,7 @@
 // Forms for headings and lists, and the delete confirmation, as <dialog>s.
 // No confirm(): it didn't always show in Safari (nestje).
 
-import { el } from "./ui.js";
+import { el, focusKey } from "./ui.js";
 import { api } from "./api.js";
 import { ROOT } from "./state.js";
 import { languages, isListed, languageName } from "./languages.js";
@@ -49,6 +49,17 @@ function setup(id) {
   });
   dialog.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
 
+  // Closing returns focus to the button that opened the dialog. If the page
+  // was drawn again meanwhile (cards added), that's its new copy.
+  let opener = null;
+  dialog.addEventListener("close", () => {
+    const key = opener && !opener.isConnected ? focusKey(opener) : null;
+    if (key) {
+      document.querySelector(key)?.focus();
+    }
+    opener = null;
+  });
+
   ctx.open = (submitFn, doneFn, { stay = false, onStay = null } = {}) => {
     ctx.submit = submitFn;
     ctx.done = doneFn;
@@ -56,6 +67,7 @@ function setup(id) {
     ctx.onStay = onStay;
     showError("");
     submit.disabled = false;
+    opener = document.activeElement;
     dialog.showModal();
   };
   return ctx;

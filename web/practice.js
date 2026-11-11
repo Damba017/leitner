@@ -4,7 +4,7 @@
 // one card (kind "card": the card of a notification) counts like a due one.
 
 import { api } from "./api.js";
-import { el, showStatus } from "./ui.js";
+import { el, fill, icon, showStatus } from "./ui.js";
 import { createCard } from "./card.js";
 import { checkAnswer, shuffle, askedDirection } from "./answer.js";
 import { languageName } from "./languages.js";
@@ -27,13 +27,17 @@ function sides(item, list) {
 
 function speakButton(label, side) {
   return canSpeak
-    ? el("button", {
-        type: "button",
-        class: "icon secondary",
-        "aria-label": `${label} voorlezen`,
-        onclick: () => speak(side.speech, side.lang),
-        text: "🔊",
-      })
+    ? el(
+        "button",
+        {
+          type: "button",
+          class: "icon-button flipcard-action",
+          "aria-label": `${label} voorlezen`,
+          title: "Voorlezen",
+          onclick: () => speak(side.speech, side.lang),
+        },
+        icon("speaker"),
+      )
     : null;
 }
 
@@ -65,13 +69,16 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
   let pending = null; // a wrong first answer, stored when the card is left
 
   const back = el("a", { class: "back-link", href: backHash, text: single ? "← Overzicht" : `← ${name}` });
-  const header = [
-    back,
-    el("h1", { tabindex: "-1", text: single ? "Kaart uit een melding" : `${due ? "Oefenen" : "Vrij oefenen"}: ${name}` }),
-  ];
+  const heading = el("h1", { tabindex: "-1", text: single ? "Kaart" : name });
+  const header = el(
+    "div",
+    { class: "practice-head" },
+    el("p", { class: "eyebrow", text: single ? "Kaart uit een melding" : due ? "Oefenen" : "Vrij oefenen" }),
+    heading,
+  );
   const body = el("div", { class: "practice" });
-  view.replaceChildren(...header, body);
-  view.querySelector("h1").focus({ preventScroll: true });
+  view.replaceChildren(back, header, body);
+  heading.focus({ preventScroll: true });
 
   // record stores an answer of a due session; failures are shown, the
   // session goes on. Without the server, later answers aren't stored.
@@ -106,8 +113,10 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     Promise.allSettled(posts).then(onEnd);
   }
 
+  // message replaces the card with a short screen: an error, nothing to do,
+  // or the end of the session.
   function message(...children) {
-    body.replaceChildren(...children);
+    fill(body, el("div", { class: "practice-message" }, children));
     body.querySelector("h2")?.focus({ preventScroll: true });
   }
 
@@ -143,6 +152,7 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
         backHash = `#/lijst/${cardList.id}`;
         back.href = backHash;
         back.textContent = `← ${name}`;
+        heading.textContent = name;
       }
     }
     queue = shuffle(items.map((it) => ({ ...it, direction: askedDirection(it.direction), repeat: false })));
@@ -152,6 +162,7 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     firstRight = 0;
     if (total === 0) {
       message(
+        icon(due ? "check" : "cards"),
         el("h2", { tabindex: "-1", text: due ? "Niets te doen" : "Geen kaarten" }),
         el("p", { text: due ? "Alles is bij. Je kunt wel vrij oefenen." : "Hier staan nog geen kaarten." }),
         el(
@@ -193,9 +204,10 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     const { item } = current;
     const list = getLib().lists.get(item.listId) ?? noList;
     const { ask, answer } = sides(item, list);
+    // The answer's read-aloud button is on the back, so it shows once checked.
     const card = createCard({
-      front: { text: ask.text, lang: ask.lang, label: languageName(ask.lang) },
-      back: { text: answer.text, lang: answer.lang, label: languageName(answer.lang) },
+      front: { text: ask.text, lang: ask.lang, label: languageName(ask.lang), action: speakButton("Vraag", ask) },
+      back: { text: answer.text, lang: answer.lang, label: languageName(answer.lang), action: speakButton("Antwoord", answer) },
       interactive: false,
     });
     const input = el("input", {
@@ -211,10 +223,6 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     const submit = el("button", { type: "submit", text: "Controleren" });
     const feedback = el("p", { class: "feedback", role: "status" });
     const note = el("p", { class: "card-note", hidden: true }, el("span", { class: "visually-hidden", text: "Notitie: " }), item.note);
-    const answerSpeak = speakButton("Antwoord", answer);
-    if (answerSpeak) {
-      answerSpeak.hidden = true;
-    }
     const override = el("button", { type: "button", class: "secondary", hidden: true, onclick: acceptAnyway, text: "Toch goed" });
     const form = el(
       "form",
@@ -229,20 +237,30 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
         act();
       }
     });
-    ui = { card, input, submit, feedback, note, answerSpeak, override, list, answer };
-    body.replaceChildren(
-      el("p", { class: "practice-progress muted", text: progressText() }),
+    ui = { card, input, submit, feedback, note, override, list, answer };
+    // The bar shows the share of questions done: answered right, repeats included.
+    const remaining = queue.length + retry.length + 1;
+    const bar = el("span", { class: "progress-fill" });
+    bar.style.setProperty("--done", String((total - remaining) / total));
+    fill(
+      body,
+      el(
+        "div",
+        { class: "progress" },
+        el("p", { class: "practice-progress", text: progressText() }),
+        el("span", { class: "progress-bar", "aria-hidden": "true" }, bar),
+      ),
       due && !storing ? el("p", { class: "hint", text: "Offline: je antwoorden worden niet bewaard." }) : null,
       card.element,
-      el("div", { class: "row practice-speak" }, speakButton("Vraag", ask), answerSpeak),
       form,
+      el("p", { class: "hint key-hint", text: "Enter: controleren · nog een keer Enter: volgende kaart" }),
       feedback,
       note,
       el(
         "div",
-        { class: "row actions" },
+        { class: "row practice-actions" },
         override,
-        el("a", { class: "button-link", href: backHash, text: "Stoppen" }),
+        el("a", { class: "button-link quiet stop", href: backHash, text: "Stoppen" }),
       ),
     );
     input.focus({ preventScroll: true });
@@ -278,9 +296,6 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     ui.card.flip(true);
     ui.submit.textContent = "Volgende";
     ui.note.hidden = !current.item.note;
-    if (ui.answerSpeak) {
-      ui.answerSpeak.hidden = false;
-    }
     ui.override.hidden = result.correct;
     let text;
     if (result.empty) {
@@ -302,7 +317,9 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
 
   function showVerdict(correct, text) {
     ui.feedback.className = `feedback ${correct ? "is-right" : "is-wrong"}`;
-    ui.feedback.textContent = text;
+    ui.feedback.replaceChildren(icon(correct ? "check" : "cross"), el("span", { text }));
+    ui.card.element.classList.toggle("is-right", correct);
+    ui.card.element.classList.toggle("is-wrong", !correct);
   }
 
   // acceptAnyway turns a wrong verdict into a right one ("Toch goed").
@@ -332,8 +349,9 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
     ui = null;
     if (single) {
       message(
+        icon(firstRight ? "check" : "cards"),
         el("h2", { tabindex: "-1", text: "Klaar!" }),
-        el("p", { text: firstRight ? "In één keer goed." : "Goed na een herhaling." }),
+        el("p", { class: "result", text: firstRight ? "In één keer goed." : "Goed na een herhaling." }),
         storing ? el("p", { class: "hint", text: "Je antwoord is bewaard. De kaart komt terug zodra hij weer te doen is." }) : null,
         storing ? null : el("p", { class: "hint", text: "Je antwoord is niet bewaard: je was offline." }),
         el(
@@ -349,8 +367,14 @@ export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreach
       return;
     }
     message(
+      icon("check"),
       el("h2", { tabindex: "-1", text: "Klaar!" }),
-      el("p", { text: `${firstRight} van ${total} in één keer goed.` }),
+      el(
+        "p",
+        { class: "result" },
+        el("span", { class: "result-number", text: `${firstRight} van ${total}` }),
+        el("span", { text: " in één keer goed" }),
+      ),
       due && storing ? el("p", { class: "hint", text: "Je antwoorden zijn bewaard. Elke kaart komt terug zodra hij weer te doen is." }) : null,
       due && !storing ? el("p", { class: "hint", text: "Je antwoorden zijn niet bewaard: je was offline." }) : null,
       el(

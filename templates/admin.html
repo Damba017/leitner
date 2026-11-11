@@ -3,12 +3,14 @@
 <h1>Admin</h1>
 {{template "messages" .}}
 
+<section class="panel">
 <h2>Registratie</h2>
 <form method="post" action="/admin/registration" class="row">
   <span>Registreren is <strong>{{if .RegistrationOpen}}open{{else}}gesloten{{end}}</strong>.</span>
   <input type="hidden" name="open" value="{{if .RegistrationOpen}}0{{else}}1{{end}}">
-  <button>{{if .RegistrationOpen}}Registratie sluiten{{else}}Registratie openen{{end}}</button>
+  <button class="secondary">{{if .RegistrationOpen}}Registratie sluiten{{else}}Registratie openen{{end}}</button>
 </form>
+</section>
 
 <h2>Gebruikers</h2>
 <ul class="users">
