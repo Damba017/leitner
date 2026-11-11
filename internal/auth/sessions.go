@@ -30,6 +30,12 @@ func hashToken(token string) []byte {
 	return h[:]
 }
 
+// TokenHash is the stored key of the session with token, for rows that end
+// with the session (push subscriptions).
+func TokenHash(token string) []byte {
+	return hashToken(token)
+}
+
 // NewSession creates a session for userID and returns its token for the cookie.
 func NewSession(ctx context.Context, db *sql.DB, userID int64, now time.Time) (string, error) {
 	b := make([]byte, 32)

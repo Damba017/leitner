@@ -1,7 +1,7 @@
 // Table tests for web/due.js. Run by js_test.go as
 // `jsc -m testdata/due_test.js`; prints each failure and throws if any.
 
-import { practiceItems, dueCounts } from "../web/due.js";
+import { practiceItems, dueCounts, cardItem } from "../web/due.js";
 
 const now = Date.parse("2026-11-10T12:00:00Z");
 const card = (id, listId) => ({ id, listId, front: `f${id}`, back: `b${id}`, note: "", pronunciation: "" });
@@ -56,6 +56,18 @@ const counts = [...dueCounts(snapshot, now)].map(([id, n]) => `${id}=${n}`).join
 if (counts !== "1=2 2=1 3=3") {
   failures.push(`dueCounts = "${counts}", want "1=2 2=1 3=3"`);
 }
+for (const [name, id, d, want] of [
+  ["card in the schedule", 31, "2-1", "31:2-1:5"],
+  ["card direction never answered", 30, "2-1", "30:2-1:1"],
+  ["card not due yet", 12, "1-2", "12:1-2:4"],
+  ["card that isn't there", 404, "1-2", ""],
+]) {
+  const got = questions(cardItem(snapshot, id, d));
+  if (got !== want) {
+    failures.push(`cardItem ${name}: got "${got}", want "${want}"`);
+  }
+}
+
 const empty = dueCounts({ lists: [], cards: [], schedule: [] }, now);
 if (empty.size !== 0) {
   failures.push(`dueCounts of nothing has ${empty.size} entries`);

@@ -2,7 +2,8 @@
 // offline mode. Routes are hashes, so they work offline too:
 // #/ (overview), #/kop/{id} (a heading), #/lijst/{id} (a list),
 // #/oefenen/kop/{id} and #/oefenen/lijst/{id} (practice what is due; with
-// /vrij at the end: practice freely).
+// /vrij at the end: practice freely), #/kaart/{id}/{1-2|2-1} (the card of a
+// notification, to answer) and #/meldingen (notification settings).
 //
 // Offline: when the server can't be reached (not just navigator.onLine), the
 // app shows the snapshot kept on the device, read-only. It tries the server
@@ -11,7 +12,7 @@
 
 import { api } from "./api.js";
 import { isOffline, setOffline, saveSnapshot, loadSnapshot } from "./offline.js";
-import { practiceItems, dueCounts } from "./due.js";
+import { practiceItems, dueCounts, cardItem } from "./due.js";
 import { showStatus } from "./ui.js";
 import { Library, ROOT, itemKey } from "./state.js";
 import { renderTree, loadOpen, saveOpen, focusMoveButton, focusToggle } from "./tree.js";
@@ -28,6 +29,7 @@ import {
 } from "./dialogs.js";
 import { makeSortable } from "./drag.js";
 import { startPractice } from "./practice.js";
+import { startNotify } from "./notify.js";
 
 const app = document.getElementById("app");
 const treeRoot = document.getElementById("tree");
@@ -36,6 +38,7 @@ const orderToggle = document.getElementById("order-toggle");
 const orderHint = document.getElementById("order-hint");
 
 let lib = new Library({ headings: [], lists: [] });
+const getLib = () => lib; // for views that outlive a reload of the tree
 let open = loadOpen(); // expanded headings on this device
 let ordering = false;
 let saving = Promise.resolve(); // order changes go to the server one by one
@@ -44,7 +47,8 @@ let pendingStatus = null; // message for the page navigate() goes to
 let shown = { listId: null, cards: null };
 let loadingFor = null; // list whose cards are being fetched
 let due = null; // due questions per list id (Map), null = unknown
-// The practice session on screen: its route key and leave().
+// The view on screen that draws itself (a practice session or the Meldingen
+// tab): its route key and leave().
 let session = null;
 // The user's data as last kept on the device (GET /api/offline); used while
 // offline, null if there is none.
@@ -130,8 +134,29 @@ async function refreshSnapshot() {
 
 // offlineItems is loadItems for a practice session, from the snapshot.
 function offlineItems(route) {
+  if (route.kind === "card") {
+    return { items: snapshot ? cardItem(snapshot, route.id, route.direction) : [], offline: true };
+  }
   const ids = route.kind === "heading" ? lib.listsIn(route.id) : [route.id];
   return { items: snapshot ? practiceItems(snapshot, ids, route.mode, Date.now()) : [], offline: true };
+}
+
+// onlineItems fetches a session's questions; a card that is gone has none.
+async function onlineItems(route) {
+  if (route.kind === "card") {
+    try {
+      const { item } = await api("GET", `/api/cards/${route.id}?direction=${route.direction}`);
+      return [item];
+    } catch (err) {
+      if (err.status === 404) {
+        return [];
+      }
+      throw err;
+    }
+  }
+  const param = route.kind === "heading" ? "heading" : "list";
+  const { items } = await api("GET", `/api/practice?${param}=${route.id}&mode=${route.mode}`);
+  return items;
 }
 
 // loadItems gives a practice session its questions: from the server, or
@@ -141,9 +166,7 @@ async function loadItems(route) {
     return offlineItems(route);
   }
   try {
-    const param = route.kind === "heading" ? "heading" : "list";
-    const { items } = await api("GET", `/api/practice?${param}=${route.id}&mode=${route.mode}`);
-    return { items, offline: false };
+    return { items: await onlineItems(route), offline: false };
   } catch (err) {
     if (!err.unreachable) {
       throw err;
@@ -154,6 +177,13 @@ async function loadItems(route) {
 }
 
 function currentRoute() {
+  if (location.hash === "#/meldingen") {
+    return { kind: "notify" };
+  }
+  const card = location.hash.match(/^#\/kaart\/(\d+)\/(1-2|2-1)$/);
+  if (card) {
+    return { kind: "card", id: Number(card[1]), direction: card[2], practice: "due" };
+  }
   const m = location.hash.match(/^#\/(oefenen\/)?(kop|lijst)\/(\d+)(\/vrij)?$/);
   if (!m || (m[4] && !m[1])) {
     return null;
@@ -201,7 +231,7 @@ async function loadDue() {
 // revealCurrent expands the headings above the open page.
 function revealCurrent() {
   const r = currentRoute();
-  if (!r) {
+  if (r?.kind !== "heading" && r?.kind !== "list") {
     return;
   }
   const parent = r.kind === "heading" ? lib.headings.get(r.id)?.parentId : lib.lists.get(r.id)?.headingId;
@@ -215,23 +245,46 @@ function renderSidebar() {
   renderTree(treeRoot, lib, { current: currentRoute(), open, ordering, onToggle: toggle, onMove: moveBy });
 }
 
+// markMenu marks the top-bar link of the page on screen.
+function markMenu(notify) {
+  for (const a of document.querySelectorAll(".menu a[href^='#']")) {
+    if ((a.getAttribute("href") === "#/meldingen") === notify) {
+      a.setAttribute("aria-current", "page");
+    } else {
+      a.removeAttribute("aria-current");
+    }
+  }
+}
+
 // render draws the sidebar and the page; focus moves to the page title, for
 // keyboard and screen reader users after navigating.
 function render({ focus = false } = {}) {
   const r = currentRoute();
   app.dataset.route = r ? (r.practice ? "practice" : r.kind) : "home";
+  markMenu(r?.kind === "notify");
   renderSidebar();
-  const key = r?.practice ? location.hash : null;
+  const key = r?.practice || r?.kind === "notify" ? location.hash : null;
   if (session && session.key !== key) {
     session.leave();
     session = null;
   }
+  if (r?.kind === "notify") {
+    // The tab draws itself, like a session.
+    if (!session) {
+      session = { key, leave: startNotify(view, getLib) };
+    }
+    if (focus) {
+      window.scrollTo(0, 0);
+    }
+    return;
+  }
   if (r?.practice) {
-    // A session draws itself; redraws of the sidebar leave it alone.
-    const exists = (r.kind === "heading" ? lib.headings : lib.lists).has(r.id);
+    // A session draws itself; redraws of the sidebar leave it alone. A
+    // card's list is only known once the card is loaded.
+    const exists = r.kind === "card" || (r.kind === "heading" ? lib.headings : lib.lists).has(r.id);
     if (!session && exists) {
-      const route = { kind: r.kind, id: r.id, mode: r.practice };
-      session = { key, leave: startPractice(view, lib, route, { loadItems, onEnd: loadDue, onUnreachable: goOffline }) };
+      const route = { kind: r.kind, id: r.id, mode: r.practice, direction: r.direction };
+      session = { key, leave: startPractice(view, getLib, route, { loadItems, onEnd: loadDue, onUnreachable: goOffline }) };
     } else if (!exists) {
       renderNotFound(view);
     }
@@ -479,5 +532,30 @@ window.addEventListener("pageshow", (e) => {
 });
 window.addEventListener("online", reload);
 window.addEventListener("offline", goOffline);
+
+// A click on a notification while the app is open: the service worker asks
+// this page to show the card when it can't navigate it itself, or to start
+// it again when it is already on screen (e.g. finished an hour ago).
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data?.type !== "open" || typeof e.data.url !== "string") {
+      return;
+    }
+    const url = new URL(e.data.url, location.href);
+    if (url.origin !== location.origin) {
+      return;
+    }
+    if (url.href !== location.href) {
+      location.assign(url.href);
+      return;
+    }
+    if (session) {
+      session.leave();
+      session = null;
+    }
+    render({ focus: true });
+  });
+  navigator.serviceWorker.startMessages?.();
+}
 
 (navigator.onLine === false ? goOffline() : reload()).then(revealCurrent).then(() => render());

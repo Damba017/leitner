@@ -55,6 +55,8 @@ func TestParseServe(t *testing.T) {
 		{nil, false, config{addr: "127.0.0.1:8370", dbPath: "leitner.db"}},
 		{[]string{"-addr", ":9000", "-db", "data/x.db", "-url", "https://h.example.ts.net:8443"}, false,
 			config{addr: ":9000", dbPath: "data/x.db", baseURL: "https://h.example.ts.net:8443"}},
+		{[]string{"-dev", "-url", "https://h.example.ts.net:8443"}, false,
+			config{addr: "127.0.0.1:8370", dbPath: "leitner.db", baseURL: "https://h.example.ts.net:8443", dev: true}},
 		{[]string{"-url", "http://h.example.com"}, true, config{}},
 		{[]string{"-url", "https://"}, true, config{}},
 		{[]string{"-url", "h.example.com"}, true, config{}},

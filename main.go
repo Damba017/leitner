@@ -21,7 +21,7 @@ import (
 )
 
 const usage = `Usage:
-  leitner serve [-addr host:port] [-db file] [-url base-url]
+  leitner serve [-addr host:port] [-db file] [-url base-url] [-dev]
   leitner create-admin -db file                       (asks for name, email and password)
   leitner reset-password -db file username-or-email   (asks for the new password)
   leitner list-users -db file
@@ -76,7 +76,8 @@ func parseServe(args []string) (config, error) {
 	var cfg config
 	fs.StringVar(&cfg.addr, "addr", "127.0.0.1:8370", "listen address")
 	fs.StringVar(&cfg.dbPath, "db", "leitner.db", "SQLite database file (its folder is created if missing)")
-	fs.StringVar(&cfg.baseURL, "url", "", "public base URL, e.g. https://leitner.example.com:8443")
+	fs.StringVar(&cfg.baseURL, "url", "", "public base URL, e.g. https://leitner.example.com:8443 (needed to send notifications)")
+	fs.BoolVar(&cfg.dev, "dev", false, "local testing: session cookie without Secure, also with -url (never in production)")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}

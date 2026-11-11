@@ -46,7 +46,7 @@ func CreateHeading(ctx context.Context, db *sql.DB, userID int64, name string, p
 	if err := tx.Commit(); err != nil {
 		return Heading{}, err
 	}
-	return Heading{ID: id, ParentID: parentID, Name: name, Position: pos}, nil
+	return Heading{ID: id, ParentID: parentID, Name: name, Position: pos, Notify: true}, nil
 }
 
 // UpdateHeading renames heading id and moves it to parentID. A move puts it
@@ -63,8 +63,8 @@ func UpdateHeading(ctx context.Context, db *sql.DB, userID, id int64, name strin
 	defer tx.Rollback()
 
 	h := Heading{ID: id, Name: name}
-	err = tx.QueryRowContext(ctx, "SELECT parent_id, position FROM headings WHERE id = ? AND user_id = ?",
-		id, userID).Scan(&h.ParentID, &h.Position)
+	err = tx.QueryRowContext(ctx, "SELECT parent_id, position, notify FROM headings WHERE id = ? AND user_id = ?",
+		id, userID).Scan(&h.ParentID, &h.Position, &h.Notify)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Heading{}, ErrNotFound
 	}

@@ -929,3 +929,68 @@ button.icon {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* The Meldingen tab. */
+.device-status {
+  margin: 0 0 0.25rem;
+}
+
+.devices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.devices li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.8rem;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.devices li.muted {
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.stack .quiet-times {
+  margin-top: 0.25rem;
+}
+
+.stack .quiet-times label {
+  margin-top: 0;
+}
+
+.quiet-times input {
+  flex: 0 1 8rem;
+}
+
+.notify-tree {
+  margin-top: 0.5rem;
+}
+
+.notify-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notify-list .notify-list {
+  padding-left: 1.75rem;
+}
+
+.notify-list label.choice {
+  margin: 0;
+  padding: 0.35rem 0;
+  overflow-wrap: anywhere;
+}

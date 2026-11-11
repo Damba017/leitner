@@ -1,6 +1,7 @@
 // A practice session: what is due (first answers change the schedule) or
 // free (nothing is stored). Cards come shuffled; a wrong card comes back at
-// the end until it is right. Enter checks, Enter again goes on.
+// the end until it is right. Enter checks, Enter again goes on. A session on
+// one card (kind "card": the card of a notification) counts like a due one.
 
 import { api } from "./api.js";
 import { el, showStatus } from "./ui.js";
@@ -36,18 +37,23 @@ function speakButton(label, side) {
     : null;
 }
 
-// startPractice runs a session on route ({kind, id, mode}) in view.
+// startPractice runs a session on route ({kind, id, mode}; a card route also
+// has its direction) in view; getLib returns the app's current tree.
 // loadItems(route) resolves to {items, offline}: a session on offline items
 // stores nothing, even if the server comes back. onEnd runs once the stored
 // answers are in, so due counts can be fetched again; onUnreachable when
 // storing an answer finds the server gone. It returns leave(), which stores a
 // pending answer; call it when the page changes.
-export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachable }) {
+export function startPractice(view, getLib, route, { loadItems, onEnd, onUnreachable }) {
+  const lib = getLib();
   const due = route.mode === "due";
+  const single = route.kind === "card";
   let storing = false; // answers go to the server: due and online at the start
-  const scope = (route.kind === "heading" ? lib.headings : lib.lists).get(route.id);
-  const name = scope?.name ?? "";
-  const backHash = route.kind === "heading" ? `#/kop/${route.id}` : `#/lijst/${route.id}`;
+  const scope = single ? null : (route.kind === "heading" ? lib.headings : lib.lists).get(route.id);
+  // A card's list is known once it is loaded.
+  let name = scope?.name ?? "";
+  let backHash = single ? "#/" : route.kind === "heading" ? `#/kop/${route.id}` : `#/lijst/${route.id}`;
+  let cardList = null;
   const posts = []; // answers being stored
   let left = false;
   let queue = []; // still to ask in this round
@@ -58,9 +64,10 @@ export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachabl
   let current = null; // {item, first, checked, correct}
   let pending = null; // a wrong first answer, stored when the card is left
 
+  const back = el("a", { class: "back-link", href: backHash, text: single ? "← Overzicht" : `← ${name}` });
   const header = [
-    el("a", { class: "back-link", href: backHash, text: `← ${name}` }),
-    el("h1", { tabindex: "-1", text: `${due ? "Oefenen" : "Vrij oefenen"}: ${name}` }),
+    back,
+    el("h1", { tabindex: "-1", text: single ? "Kaart uit een melding" : `${due ? "Oefenen" : "Vrij oefenen"}: ${name}` }),
   ];
   const body = el("div", { class: "practice" });
   view.replaceChildren(...header, body);
@@ -120,6 +127,24 @@ export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachabl
     if (left) {
       return;
     }
+    if (single) {
+      if (!items.length) {
+        message(
+          el("h2", { tabindex: "-1", text: "Niet gevonden" }),
+          el("p", { text: "Deze kaart bestaat niet meer." }),
+          el("div", { class: "row actions" }, el("a", { class: "button-link", href: "#/", text: "Naar het overzicht" })),
+        );
+        return;
+      }
+      // Unknown when the tree is still loading: then the card goes on without.
+      cardList = getLib().lists.get(items[0].listId) ?? null;
+      if (cardList) {
+        name = cardList.name;
+        backHash = `#/lijst/${cardList.id}`;
+        back.href = backHash;
+        back.textContent = `← ${name}`;
+      }
+    }
     queue = shuffle(items.map((it) => ({ ...it, direction: askedDirection(it.direction), repeat: false })));
     retry = [];
     total = queue.length;
@@ -141,7 +166,8 @@ export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachabl
     showNext();
   }
 
-  const backLink = () => el("a", { class: "button-link", href: backHash, text: `Terug naar „${name}”` });
+  const backLink = () =>
+    el("a", { class: "button-link", href: backHash, text: name ? `Terug naar „${name}”` : "Naar het overzicht" });
 
   function showNext() {
     if (queue.length === 0 && retry.length > 0) {
@@ -165,7 +191,7 @@ export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachabl
 
   function render() {
     const { item } = current;
-    const list = lib.lists.get(item.listId) ?? noList;
+    const list = getLib().lists.get(item.listId) ?? noList;
     const { ask, answer } = sides(item, list);
     const card = createCard({
       front: { text: ask.text, lang: ask.lang, label: languageName(ask.lang) },
@@ -304,6 +330,24 @@ export function startPractice(view, lib, route, { loadItems, onEnd, onUnreachabl
 
   function finish() {
     ui = null;
+    if (single) {
+      message(
+        el("h2", { tabindex: "-1", text: "Klaar!" }),
+        el("p", { text: firstRight ? "In één keer goed." : "Goed na een herhaling." }),
+        storing ? el("p", { class: "hint", text: "Je antwoord is bewaard. De kaart komt terug zodra hij weer te doen is." }) : null,
+        storing ? null : el("p", { class: "hint", text: "Je antwoord is niet bewaard: je was offline." }),
+        el(
+          "div",
+          { class: "row actions" },
+          cardList
+            ? el("a", { class: "button-link primary", href: practiceHash("list", cardList.id, "due"), text: `Oefen „${name}”` })
+            : null,
+          backLink(),
+        ),
+      );
+      end();
+      return;
+    }
     message(
       el("h2", { tabindex: "-1", text: "Klaar!" }),
       el("p", { text: `${firstRight} van ${total} in één keer goed.` }),

@@ -87,4 +87,36 @@ var migrations = []string{
 		reviewed_at INTEGER NOT NULL,
 		PRIMARY KEY (card_id, direction)
 	) STRICT;`,
+
+	// 6: Web Push. A subscription is one browser's endpoint plus the keys
+	// (65 and 16 bytes) it made for it; it belongs to the login session that
+	// turned it on, so logging out (anywhere) ends it. The server's own VAPID
+	// key goes in settings when it first starts. notify_settings holds each
+	// user's interval and quiet hours (minutes after midnight, Amsterdam time;
+	// interval 0 = off) and what was sent last; no row means the defaults.
+	// notify switches a heading (with everything in it) or a list off.
+	`CREATE TABLE push_subscriptions (
+		id           INTEGER PRIMARY KEY,
+		user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		session_hash BLOB NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,
+		endpoint     TEXT NOT NULL UNIQUE,
+		p256dh       BLOB NOT NULL,
+		auth         BLOB NOT NULL,
+		label        TEXT NOT NULL DEFAULT '',
+		created_at   INTEGER NOT NULL
+	) STRICT;
+	CREATE INDEX push_subscriptions_user ON push_subscriptions(user_id);
+	CREATE INDEX push_subscriptions_session ON push_subscriptions(session_hash);
+	CREATE TABLE notify_settings (
+		user_id        INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+		interval_min   INTEGER NOT NULL CHECK (interval_min >= 0),
+		quiet_on       INTEGER NOT NULL CHECK (quiet_on IN (0, 1)),
+		quiet_from     INTEGER NOT NULL CHECK (quiet_from BETWEEN 0 AND 1439),
+		quiet_until    INTEGER NOT NULL CHECK (quiet_until BETWEEN 0 AND 1439),
+		last_sent_at   INTEGER NOT NULL DEFAULT 0,
+		last_card_id   INTEGER,
+		last_direction TEXT CHECK (last_direction IN ('1-2', '2-1'))
+	) STRICT;
+	ALTER TABLE headings ADD COLUMN notify INTEGER NOT NULL DEFAULT 1 CHECK (notify IN (0, 1));
+	ALTER TABLE lists ADD COLUMN notify INTEGER NOT NULL DEFAULT 1 CHECK (notify IN (0, 1));`,
 }

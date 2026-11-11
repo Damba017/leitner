@@ -45,16 +45,17 @@ type List struct {
 	ID int64 `json:"id"`
 	ListFields
 	Position int64 `json:"position"`
+	Notify   bool  `json:"notify"` // false: no notifications from its cards
 }
 
-const listColumns = `id, heading_id, name, position, lang1, lang2, direction, strict_case, strict_punct, strict_accents`
+const listColumns = `id, heading_id, name, position, lang1, lang2, direction, strict_case, strict_punct, strict_accents, notify`
 
 type scanner interface{ Scan(dest ...any) error }
 
 func scanList(s scanner) (List, error) {
 	var l List
 	err := s.Scan(&l.ID, &l.HeadingID, &l.Name, &l.Position, &l.Lang1, &l.Lang2, &l.Direction,
-		&l.StrictCase, &l.StrictPunct, &l.StrictAccents)
+		&l.StrictCase, &l.StrictPunct, &l.StrictAccents, &l.Notify)
 	return l, err
 }
 
@@ -112,7 +113,7 @@ func CreateList(ctx context.Context, db *sql.DB, userID int64, f ListFields) (Li
 	if err := tx.Commit(); err != nil {
 		return List{}, err
 	}
-	return List{ID: id, ListFields: f, Position: pos}, nil
+	return List{ID: id, ListFields: f, Position: pos, Notify: true}, nil
 }
 
 // UpdateList changes all fields of list id. Moving it to another heading puts
@@ -128,8 +129,9 @@ func UpdateList(ctx context.Context, db *sql.DB, userID, id int64, f ListFields)
 	defer tx.Rollback()
 
 	var headingID, pos int64
-	err = tx.QueryRowContext(ctx, "SELECT heading_id, position FROM lists WHERE id = ? AND user_id = ?",
-		id, userID).Scan(&headingID, &pos)
+	var notify bool
+	err = tx.QueryRowContext(ctx, "SELECT heading_id, position, notify FROM lists WHERE id = ? AND user_id = ?",
+		id, userID).Scan(&headingID, &pos, &notify)
 	if errors.Is(err, sql.ErrNoRows) {
 		return List{}, ErrNotFound
 	}
@@ -156,7 +158,7 @@ func UpdateList(ctx context.Context, db *sql.DB, userID, id int64, f ListFields)
 	if err := tx.Commit(); err != nil {
 		return List{}, err
 	}
-	return List{ID: id, ListFields: f, Position: pos}, nil
+	return List{ID: id, ListFields: f, Position: pos, Notify: notify}, nil
 }
 
 // DeleteList removes list id (later with its cards, through ON DELETE CASCADE).

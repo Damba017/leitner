@@ -31,13 +31,19 @@ func openTestDB(t *testing.T) *sql.DB {
 type testApp struct {
 	t  *testing.T
 	db *sql.DB
+	s  *server
 	h  http.Handler
 }
 
 func newTestApp(t *testing.T, cfg config) *testApp {
 	t.Helper()
 	db := openTestDB(t)
-	return &testApp{t: t, db: db, h: newHandler(db, cfg)}
+	push, err := newPushSender(t.Context(), db, cfg.baseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := newServer(db, cfg, push)
+	return &testApp{t: t, db: db, s: s, h: s.handler()}
 }
 
 const testPassword = "geheim1"

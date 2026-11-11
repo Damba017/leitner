@@ -111,6 +111,7 @@ func TestSessionCookie(t *testing.T) {
 	}{
 		{config{}, false},
 		{config{baseURL: "https://leitner.example.com:8443"}, true},
+		{config{baseURL: "https://leitner.example.com:8443", dev: true}, false},
 	} {
 		app := newTestApp(t, tt.cfg)
 		app.addUser("anna", false)

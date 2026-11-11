@@ -12,12 +12,14 @@ import (
 
 	"github.com/Damba017/leitner/internal/auth"
 	"github.com/Damba017/leitner/internal/srs"
+	"github.com/Damba017/leitner/internal/webpush"
 )
 
 type config struct {
 	addr    string
 	dbPath  string
-	baseURL string // public https URL: Secure cookies now, Web Push in phase 9
+	baseURL string // public https URL: Secure cookies, and the contact the push services get
+	dev     bool   // local testing: no Secure cookies, even with baseURL
 }
 
 func init() {
@@ -31,22 +33,29 @@ type server struct {
 	limiter *auth.Limiter // failed password checks, per IP and per user
 	sched   srs.Scheduler // spaced repetition; due dates fall on Amsterdam days
 	// secureCookies marks the session cookie Secure. -url is https-only and
-	// always set in production; without it (local http) Secure would break login.
+	// always set in production; without it (local http) Secure would break
+	// login. -dev leaves it off with -url too, to test push locally.
 	secureCookies bool
 	publicFiles   map[string]bool
+	push          *webpush.Sender // signs with the server's VAPID key
+	notifier      *notifier       // sends the cards; serve starts it
 }
 
-func newHandler(db *sql.DB, cfg config) http.Handler {
-	web := webFS()
-	s := &server{
+func newServer(db *sql.DB, cfg config, push *webpush.Sender) *server {
+	return &server{
 		db:            db,
 		pages:         mustParsePages(),
 		limiter:       auth.NewLimiter(5, 15*time.Minute),
 		sched:         srs.Leitner{Loc: amsterdam},
-		secureCookies: cfg.baseURL != "",
-		publicFiles:   publicFiles(web),
+		secureCookies: cfg.baseURL != "" && !cfg.dev,
+		publicFiles:   publicFiles(webFS()),
+		push:          push,
+		notifier:      newNotifier(db, push),
 	}
+}
 
+func (s *server) handler() http.Handler {
+	web := webFS()
 	mux := http.NewServeMux()
 	mux.Handle("GET /", s.static(web))
 	mux.Handle("GET /sw.js", serviceWorker(web))
@@ -77,6 +86,14 @@ func newHandler(db *sql.DB, cfg config) http.Handler {
 	mux.HandleFunc("GET /api/practice", s.apiPractice)
 	mux.HandleFunc("POST /api/reviews", s.apiReview)
 	mux.HandleFunc("GET /api/due", s.apiDue)
+	mux.HandleFunc("GET /api/cards/{id}", s.apiPracticeCard)
+	mux.HandleFunc("GET /api/notify", s.apiNotify)
+	mux.HandleFunc("PUT /api/notify/settings", s.apiNotifySettings)
+	mux.HandleFunc("PUT /api/headings/{id}/notify", s.apiHeadingNotify)
+	mux.HandleFunc("PUT /api/lists/{id}/notify", s.apiListNotify)
+	mux.HandleFunc("POST /api/push/subscriptions", s.apiSubscribe)
+	mux.HandleFunc("DELETE /api/push/subscriptions/{id}", s.apiUnsubscribe)
+	mux.HandleFunc("POST /api/push/test", s.apiTestPush)
 	mux.HandleFunc("GET /account", s.accountPage)
 	mux.HandleFunc("POST /account/password", s.changePassword)
 	mux.Handle("GET /admin", s.adminOnly(s.adminPage))
@@ -119,9 +136,23 @@ func serve(ctx context.Context, cfg config, db *sql.DB) error {
 	nightly := newNightlyBackups(cfg.dbPath)
 	go nightly.run(ctx)
 
+	push, err := newPushSender(ctx, db, cfg.baseURL)
+	if err != nil {
+		return err
+	}
+	s := newServer(db, cfg, push)
+	if push.CanSend() {
+		go s.notifier.run(ctx)
+	} else {
+		slog.Warn("no -url: notifications can't be sent")
+	}
+	if cfg.dev {
+		slog.Warn("-dev: the session cookie isn't marked Secure")
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.addr,
-		Handler:           newHandler(db, cfg),
+		Handler:           s.handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

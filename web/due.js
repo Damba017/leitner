@@ -65,3 +65,15 @@ export function dueCounts(snapshot, now) {
   }
   return counts;
 }
+
+// cardItem returns card cardId asked in direction d with its box, like GET
+// /api/cards/{id} (a notification's question), as a list of one; empty when
+// the card isn't in the snapshot.
+export function cardItem(snapshot, cardId, d) {
+  const card = snapshot.cards.find((c) => c.id === cardId);
+  if (!card) {
+    return [];
+  }
+  const s = scheduleIndex(snapshot).get(`${cardId}:${d}`);
+  return [{ ...card, direction: d, box: s ? s.box : 1 }];
+}

@@ -34,6 +34,7 @@ type Heading struct {
 	ParentID *int64 `json:"parentId"`
 	Name     string `json:"name"`
 	Position int64  `json:"position"`
+	Notify   bool   `json:"notify"` // false: no notifications from anything in it
 }
 
 // Tree is all of a user's headings and lists, each sorted by parent and
@@ -46,7 +47,7 @@ type Tree struct {
 // GetTree returns all headings and lists of userID.
 func GetTree(ctx context.Context, db *sql.DB, userID int64) (Tree, error) {
 	t := Tree{Headings: []Heading{}, Lists: []List{}}
-	rows, err := db.QueryContext(ctx, `SELECT id, parent_id, name, position FROM headings
+	rows, err := db.QueryContext(ctx, `SELECT id, parent_id, name, position, notify FROM headings
 		WHERE user_id = ? ORDER BY parent_id, position, id`, userID)
 	if err != nil {
 		return Tree{}, err
@@ -54,7 +55,7 @@ func GetTree(ctx context.Context, db *sql.DB, userID int64) (Tree, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var h Heading
-		if err := rows.Scan(&h.ID, &h.ParentID, &h.Name, &h.Position); err != nil {
+		if err := rows.Scan(&h.ID, &h.ParentID, &h.Name, &h.Position, &h.Notify); err != nil {
 			return Tree{}, err
 		}
 		t.Headings = append(t.Headings, h)
